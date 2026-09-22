@@ -544,12 +544,108 @@
 
 {% endif %}
 
+<!-- ========================================================================= -->
+<!-- 🔥 TACTICAL DECOMPILATION & EXTRACTION PROGRESS OVERLAY                   -->
+<!-- ========================================================================= -->
+<div id="decompileProgressOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div class="glass-card" style="width: 100%; max-width: 680px; border: 3px solid var(--cyber-pink); box-shadow: 10px 10px 0px #000, 0 0 30px rgba(255, 0, 85, 0.4); background: #070913;">
+        
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="anime-tag" id="hudBadge" style="background: var(--cyber-pink); color: #000;">[ 進行中 PROCESSING: INGESTING APK ]</span>
+            <span class="font-mono text-secondary small">// 全自動逆コンパイル</span>
+        </div>
+        
+        <h2 class="h3 fw-bold text-white font-anime mb-1" id="hudTitle">
+            DECOMPILING &amp; ANALYZING APK...
+        </h2>
+        <p class="text-secondary font-mono small mb-3">
+            Unpacking archive container, decoding AndroidManifest, detecting engine signatures, and extracting verified memory offsets.
+        </p>
+        
+        <div class="p-2 mb-3 font-mono text-warning small fw-bold" id="hudFilename" style="background: var(--cyber-panel); border: 2px solid #000; box-shadow: 2px 2px 0px #000;">
+            TARGET PAYLOAD: Preparing...
+        </div>
+
+        <!-- Chunky 3D Neon Progress Bar -->
+        <div style="height: 28px; background: #000; border: 2px solid var(--cyber-cyan); box-shadow: 4px 4px 0px #000; position: relative; overflow: hidden;" class="mb-2">
+            <div id="hudProgressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #ff0055, #00f0ff, #ffe600); background-size: 40px 40px; background-image: linear-gradient(45deg, rgba(0, 0, 0, 0.18) 25%, transparent 25%, transparent 50%, rgba(0, 0, 0, 0.18) 50%, rgba(0, 0, 0, 0.18) 75%, transparent 75%, transparent); animation: stripeMove 1.5s linear infinite; transition: width 0.3s ease;"></div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center font-mono mb-3">
+            <span id="hudProgressPercent" class="text-info fs-5 fw-bold">0%</span>
+            <span id="hudTransferStats" class="text-secondary small">0.0 MB / 0.0 MB</span>
+        </div>
+
+        <!-- Telemetry Console Output Window -->
+        <div class="p-3 font-mono small" id="hudConsoleLogs" style="background: #030408; border: 2px solid #000; max-height: 160px; overflow-y: auto; color: #00ff88; line-height: 1.6; font-size: 0.8rem; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);">
+            <div>[ 01 ] INITIALIZING DECOMPILATION WORKSPACE...</div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-dark">
+            <span class="font-mono text-secondary small" style="font-size: 0.72rem;">
+                <i class="bi bi-info-circle-fill text-info me-1"></i> DO NOT REFRESH OR CLOSE WINDOW
+            </span>
+            <button type="button" class="btn-action-secondary py-1 px-3 font-mono small" id="hudCloseBtn" style="display: none;" onclick="document.getElementById('decompileProgressOverlay').style.display='none';">
+                CLOSE WINDOW
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes stripeMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 40px 0; }
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var dropzone = document.getElementById('apkDropzone');
     var fileInput = document.getElementById('directApkInput');
     var display = document.getElementById('selectedApkDisplay');
+    var form = document.getElementById('directApkForm');
     
+    // Progress Overlay Elements
+    var overlay = document.getElementById('decompileProgressOverlay');
+    var progressBar = document.getElementById('hudProgressBar');
+    var progressPercent = document.getElementById('hudProgressPercent');
+    var transferStats = document.getElementById('hudTransferStats');
+    var hudFilename = document.getElementById('hudFilename');
+    var hudBadge = document.getElementById('hudBadge');
+    var hudTitle = document.getElementById('hudTitle');
+    var consoleLogs = document.getElementById('hudConsoleLogs');
+    var closeBtn = document.getElementById('hudCloseBtn');
+
+    var telemetryPhases = [
+        "[ 02 ] UPLOADING BINARY PAYLOAD TO ISOLATED STAGING CONTAINER...",
+        "[ 03 ] UNPACKING APK ARCHIVE & SCANNING AXML MANIFEST STRING POOL...",
+        "[ 04 ] EXTRACTING PACKAGE NAME, VERSION CODES & APPLICATION LABELS...",
+        "[ 05 ] DETECTING GAME ENGINE SIGNATURES (UNITY IL2CPP vs MONO)...",
+        "[ 06 ] LOCATING global-metadata.dat & NATIVE libil2cpp.so (ARM64)...",
+        "[ 07 ] PARSING METADATA TYPE DEFINITIONS, FIELDS & METHOD SIGNATURES...",
+        "[ 08 ] TRANSLATING NATIVE ELF HEADERS & CALCULATING VERIFIED RVAs...",
+        "[ 09 ] DISCOVERING VITAL GAME DATA (CURRENCY, STATS, DAMAGE, SPEED)...",
+        "[ 10 ] GENERATING SEARCHABLE DOSSIER & COMPILATION ARCHIVE..."
+    ];
+    var currentPhaseIndex = 0;
+
+    function appendConsoleLine(msg) {
+        if (!consoleLogs) return;
+        var div = document.createElement('div');
+        div.innerText = msg;
+        consoleLogs.appendChild(div);
+        consoleLogs.scrollTop = consoleLogs.scrollHeight;
+    }
+
+    function advanceConsoleLog() {
+        if (currentPhaseIndex < telemetryPhases.length) {
+            appendConsoleLine(telemetryPhases[currentPhaseIndex]);
+            currentPhaseIndex++;
+        }
+    }
+
     if (dropzone && fileInput) {
         dropzone.addEventListener('dragover', function(e) {
             e.preventDefault();
@@ -568,16 +664,121 @@ document.addEventListener('DOMContentLoaded', function() {
             dropzone.style.background = 'rgba(0, 240, 255, 0.03)';
             if (e.dataTransfer.files.length > 0) {
                 fileInput.files = e.dataTransfer.files;
-                display.innerText = 'SELECTED: ' + e.dataTransfer.files[0].name;
+                display.innerText = 'SELECTED: ' + e.dataTransfer.files[0].name + ' (' + (e.dataTransfer.files[0].size / (1024*1024)).toFixed(1) + ' MB)';
                 display.style.display = 'block';
             }
         });
 
         fileInput.addEventListener('change', function() {
             if (fileInput.files.length > 0) {
-                display.innerText = 'SELECTED: ' + fileInput.files[0].name;
+                display.innerText = 'SELECTED: ' + fileInput.files[0].name + ' (' + (fileInput.files[0].size / (1024*1024)).toFixed(1) + ' MB)';
                 display.style.display = 'block';
             }
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var file = fileInput ? fileInput.files[0] : null;
+            if (!file) {
+                alert("PLEASE SELECT AN APK FILE FIRST! // ファイルを選択してください");
+                if (dropzone) {
+                    dropzone.style.borderColor = 'var(--cyber-pink)';
+                    dropzone.scrollIntoView({ behavior: 'smooth' });
+                }
+                return;
+            }
+
+            // Display tactical decompilation HUD
+            overlay.style.display = 'flex';
+            hudFilename.innerText = 'TARGET PAYLOAD: ' + file.name + ' (' + (file.size / (1024*1024)).toFixed(1) + ' MB)';
+            progressBar.style.width = '5%';
+            progressPercent.innerText = '5%';
+            transferStats.innerText = '0.0 MB / ' + (file.size / (1024*1024)).toFixed(1) + ' MB';
+            appendConsoleLine('[ INITIATED ] Target Payload: ' + file.name + ' (' + (file.size / (1024*1024)).toFixed(1) + ' MB)');
+
+            var formData = new FormData(form);
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action || window.location.href, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            // Real-time upload percentage (0% to 50%)
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    var percent = Math.min(50, Math.round((e.loaded / e.total) * 50));
+                    progressBar.style.width = percent + '%';
+                    progressPercent.innerText = percent + '%';
+                    transferStats.innerText = (e.loaded / (1024*1024)).toFixed(1) + ' MB / ' + (e.total / (1024*1024)).toFixed(1) + ' MB';
+                    
+                    if (e.loaded === e.total) {
+                        progressBar.style.width = '55%';
+                        progressPercent.innerText = '55%';
+                        transferStats.innerText = 'UPLOAD COMPLETE • DECOMPILING...';
+                        appendConsoleLine('[ UPLOAD SUCCESS ] Binary payload received. Initiating automated decompiler...');
+                        advanceConsoleLog();
+                    }
+                }
+            };
+
+            // Simulated step advances during server processing (55% -> 95%)
+            var serverPhaseTimer = setInterval(function() {
+                var current = parseInt(progressBar.style.width) || 55;
+                if (current < 92) {
+                    current += 6;
+                    progressBar.style.width = current + '%';
+                    progressPercent.innerText = current + '%';
+                    advanceConsoleLog();
+                }
+            }, 1200);
+
+            xhr.onload = function() {
+                clearInterval(serverPhaseTimer);
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    progressBar.style.width = '100%';
+                    progressPercent.innerText = '100%';
+                    hudBadge.innerText = '[ 完了 COMPLETE: 100% ]';
+                    hudBadge.style.background = 'var(--cyber-green)';
+                    hudTitle.innerText = 'DECOMPILATION COMPLETE!';
+                    appendConsoleLine('[ COMPLETE ] Extracted verified field offsets, classes, and game values!');
+                    appendConsoleLine('[ REDIRECTING ] Loading game data overview...');
+
+                    try {
+                        var resp = JSON.parse(xhr.responseText);
+                        if (resp.redirect_url) {
+                            setTimeout(function() {
+                                window.location.href = resp.redirect_url;
+                            }, 500);
+                            return;
+                        }
+                    } catch(err) {}
+
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 600);
+                } else {
+                    progressBar.style.background = '#ff0055';
+                    progressBar.style.width = '100%';
+                    progressPercent.innerText = 'ERROR';
+                    hudTitle.innerText = 'DECOMPILATION FAILED';
+                    hudTitle.style.color = '#ff0055';
+                    appendConsoleLine('[ FAILURE ' + xhr.status + ' ] ' + (xhr.responseText || 'Analysis pipeline encountered an error.'));
+                    if (closeBtn) closeBtn.style.display = 'inline-block';
+                }
+            };
+
+            xhr.onerror = function() {
+                clearInterval(serverPhaseTimer);
+                progressBar.style.background = '#ff0055';
+                progressBar.style.width = '100%';
+                progressPercent.innerText = 'ERROR';
+                hudTitle.innerText = 'NETWORK ERROR';
+                hudTitle.style.color = '#ff0055';
+                appendConsoleLine('[ CONNECTION ERROR ] Failed to transmit payload to server.');
+                if (closeBtn) closeBtn.style.display = 'inline-block';
+            };
+
+            xhr.send(formData);
         });
     }
 });

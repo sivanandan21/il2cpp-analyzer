@@ -15,6 +15,11 @@ class ProjectUploadForm(forms.ModelForm):
             'accept': '.apk,.zip,.dat,.so,.dll,.cs,.json,.csv'
         })
     )
+    name = forms.CharField(
+        required=False,
+        label="Game Title / Label",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Auto-detected from APK if blank...'})
+    )
     profile = forms.ModelChoiceField(
         queryset=Profile.objects.all(),
         required=False,

@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropzone = document.getElementById('uploadDropzone');
     const fileInput = document.getElementById('fileUploadInput');
     const uploadForm = document.getElementById('uploadForm');
-    const progressPanel = document.getElementById('progressPanel');
     const fileSelectedInfo = document.getElementById('fileSelectedInfo');
 
     if (!dropzone || !fileInput) return;
@@ -59,5 +58,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="cat-badge" style="background: #10b981; color: #fff; border: none;">READY</span>
             </div>
         `;
+    }
+
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("PLEASE SELECT A FILE TO ANALYZE! // ファイルを選択してください");
+                return;
+            }
+
+            const submitBtn = uploadForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> UPLOADING &amp; ANALYZING...';
+            }
+
+            const formData = new FormData(uploadForm);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', uploadForm.action || window.location.href, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            xhr.upload.onprogress = (evt) => {
+                if (evt.lengthComputable && submitBtn) {
+                    const pct = Math.round((evt.loaded / evt.total) * 50);
+                    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> UPLOADING (${pct}%)...`;
+                    if (evt.loaded === evt.total) {
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> DECOMPILING &amp; EXTRACTING...';
+                    }
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    if (submitBtn) submitBtn.innerHTML = '<i class="bi bi-check2-circle me-2"></i> COMPLETE! REDIRECTING...';
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                            return;
+                        }
+                    } catch (ex) {}
+                    window.location.href = '/';
+                } else {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ERROR - RETRY';
+                    }
+                    alert("Analysis error: " + (xhr.responseText || "Server failed to process file."));
+                }
+            };
+
+            xhr.onerror = () => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> RETRY';
+                }
+                alert("Network error occurred during upload.");
+            };
+
+            xhr.send(formData);
+        });
     }
 });

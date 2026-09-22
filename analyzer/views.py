@@ -46,14 +46,21 @@ def get_active_project(request):
 # =============================================================================
 
 def dashboard(request):
-    if request.method == 'POST' and 'file' in request.FILES:
-        form = ProjectUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            project = form.save(commit=False)
-            project.status = "UPLOADED"
-            project.save()
+    if request.method == 'POST':
+        uploaded_file = request.FILES.get('file')
+        if uploaded_file:
+            name = request.POST.get('name', '').strip()
+            if not name:
+                name = Path(uploaded_file.name).stem.replace('_', ' ').replace('-', ' ').title()
+            description = request.POST.get('description', '').strip()
 
-            uploaded_file = request.FILES['file']
+            project = Project.objects.create(
+                name=name,
+                description=description,
+                status="UPLOADED",
+                is_apk=uploaded_file.name.lower().endswith('.apk')
+            )
+
             save_dir = Path(project.get_storage_path())
             save_dir.mkdir(parents=True, exist_ok=True)
             saved_file_path = save_dir / uploaded_file.name
@@ -62,9 +69,23 @@ def dashboard(request):
                 for chunk in uploaded_file.chunks():
                     dest.write(chunk)
 
+            # Initiate analysis immediately
             ProjectManager.process_project(project.id, saved_file_path)
             request.session['active_project_id'] = project.id
-            return redirect('dashboard')
+
+            is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+            if is_ajax:
+                return JsonResponse({
+                    "status": "SUCCESS",
+                    "project_id": project.id,
+                    "redirect_url": f"/?project_id={project.id}"
+                })
+
+            return redirect(f"/?project_id={project.id}")
+        else:
+            is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+            if is_ajax:
+                return JsonResponse({"status": "ERROR", "message": "No file was selected for upload."}, status=400)
 
     active_proj = get_active_project(request)
     all_projects = Project.objects.all()[:10]
@@ -170,13 +191,20 @@ def project_detail(request, project_id):
 
 def upload_view(request):
     if request.method == 'POST':
-        form = ProjectUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            project = form.save(commit=False)
-            project.status = "UPLOADED"
-            project.save()
+        uploaded_file = request.FILES.get('file')
+        if uploaded_file:
+            name = request.POST.get('name', '').strip()
+            if not name:
+                name = Path(uploaded_file.name).stem.replace('_', ' ').replace('-', ' ').title()
+            description = request.POST.get('description', '').strip()
 
-            uploaded_file = request.FILES['file']
+            project = Project.objects.create(
+                name=name,
+                description=description,
+                status="UPLOADED",
+                is_apk=uploaded_file.name.lower().endswith('.apk')
+            )
+
             save_dir = Path(project.get_storage_path())
             save_dir.mkdir(parents=True, exist_ok=True)
             saved_file_path = save_dir / uploaded_file.name
@@ -185,12 +213,23 @@ def upload_view(request):
                 for chunk in uploaded_file.chunks():
                     dest.write(chunk)
 
-            # Initiate analysis synchronously or via background task
-            # In development/sync mode, we execute immediately
+            # Initiate analysis synchronously
             ProjectManager.process_project(project.id, saved_file_path)
-
             request.session['active_project_id'] = project.id
-            return redirect('project_detail', project_id=project.id)
+
+            is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+            if is_ajax:
+                return JsonResponse({
+                    "status": "SUCCESS",
+                    "project_id": project.id,
+                    "redirect_url": f"/?project_id={project.id}"
+                })
+
+            return redirect(f"/?project_id={project.id}")
+        else:
+            is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+            if is_ajax:
+                return JsonResponse({"status": "ERROR", "message": "No file selected."}, status=400)
     else:
         form = ProjectUploadForm()
 
