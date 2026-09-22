@@ -1014,3 +1014,72 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   flex-shrink: 0;
 }
+
+/* Report Export Format Badges */
+.badge-format-txt {
+  background: rgba(0, 240, 255, 0.12) !important;
+  color: #00f0ff !important;
+  border: 1px solid rgba(0, 240, 255, 0.45) !important;
+}
+.badge-format-cs {
+  background: rgba(184, 41, 247, 0.15) !important;
+  color: #d16eff !important;
+  border: 1px solid rgba(184, 41, 247, 0.5) !important;
+}
+.badge-format-csv {
+  background: rgba(0, 255, 102, 0.12) !important;
+  color: #00ff66 !important;
+  border: 1px solid rgba(0, 255, 102, 0.45) !important;
+}
+.badge-format-json {
+  background: rgba(255, 230, 0, 0.12) !important;
+  color: #ffe600 !important;
+  border: 1px solid rgba(255, 230, 0, 0.45) !important;
+}
+.badge-format-md {
+  background: rgba(0, 150, 255, 0.15) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(0, 150, 255, 0.45) !important;
+}
+.badge-format-zip {
+  background: rgba(255, 0, 90, 0.15) !important;
+  color: #ff3377 !important;
+  border: 1px solid rgba(255, 0, 90, 0.5) !important;
+}
+.badge-format-other {
+  background: rgba(150, 150, 150, 0.15) !important;
+  color: #cccccc !important;
+  border: 1px solid rgba(150, 150, 150, 0.3) !important;
+}
+
+/* Quick Export Action Buttons */
+.btn-export-quick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #10141e;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--cyber-white);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-export-quick:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0px var(--cyber-cyan);
+  color: var(--cyber-cyan);
+}
+.btn-export-quick.accent-yellow:hover {
+  box-shadow: 4px 4px 0px var(--cyber-yellow);
+  color: var(--cyber-yellow);
+}
+.btn-export-quick.accent-pink:hover {
+  box-shadow: 4px 4px 0px var(--cyber-pink);
+  color: var(--cyber-pink);
+}
+

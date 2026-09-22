@@ -30,7 +30,7 @@
         <a href="{% url 'graph_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
             <i class="bi bi-diagram-3"></i> Graph
         </a>
-        <a href="{% url 'reports_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2 text-white" style="font-size: 0.72rem;">
+        <a href="{% url 'reports_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-warning py-0 px-2 text-warning" style="font-size: 0.72rem;">
             <i class="bi bi-file-earmark-arrow-down"></i> Exports
         </a>
     </div>
@@ -43,7 +43,7 @@
             <span class="anime-tag">[ 成果物出力 DOSSIER EXPORTS ]</span>
             <h1 class="h3 fw-bold text-white mb-0 font-anime">ANALYSIS DOSSIERS &amp; REPORTS // 出力台帳</h1>
         </div>
-        <p class="text-secondary small mb-0 font-mono">Download verified machine-readable dumps (JSON, CSV) and formatted Markdown reports for offline research.</p>
+        <p class="text-secondary small mb-0 font-mono">Download verified plain text (.txt), C# dump (.cs), spreadsheets (.csv), and raw JSON dumps directly for offline research.</p>
     </div>
     {% if project %}
     <a href="{% url 'dashboard' %}?project_id={{ project.id }}" class="btn-action-primary">
@@ -53,48 +53,131 @@
     {% endif %}
 </div>
 
-<div class="glass-card mb-4 p-0">
-    <div class="p-3 border-bottom border-dark">
-        <div class="card-title mb-0">
-            <i class="bi bi-file-earmark-arrow-down text-warning"></i>
-            <span>EXPORTABLE DOSSIERS // 出力可能ファイル ({{ reports|length }})</span>
+<!-- 1-Click Quick Export Hero Action Bar -->
+{% if project %}
+<div class="glass-card mb-4 p-3" style="background: rgba(16, 20, 30, 0.7); border: 2px solid var(--cyber-cyan); box-shadow: 4px 4px 0px rgba(0, 240, 255, 0.2);">
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-lightning-charge-fill text-warning"></i>
+            <strong class="text-white font-mono small text-uppercase">1-Click Fast Exports // 高速一括ダウンロード</strong>
         </div>
-        <div class="card-subtitle mb-0 font-mono">Exported directly from the analysis database preserving source provenance.</div>
+        <span class="badge bg-dark border border-secondary font-mono text-secondary" style="font-size: 0.7rem;">Verified Filenames &bull; Direct Notepad &amp; Cheat Engine Ready</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap pt-1">
+        <a href="{% url 'download_report' project.id 'all_reports.zip' %}" download="all_reports.zip" class="btn-action-primary py-2 px-3" style="font-size: 0.8rem; background: var(--cyber-yellow); color: #000;">
+            <i class="bi bi-file-earmark-zip-fill"></i>
+            <span>DOWNLOAD ALL (.ZIP)</span>
+        </a>
+        <a href="{% url 'download_report' project.id 'all_txt_reports.zip' %}" download="all_txt_reports.zip" class="btn-action-primary py-2 px-3" style="font-size: 0.8rem; background: var(--cyber-cyan); color: #000;">
+            <i class="bi bi-file-text-fill"></i>
+            <span>ALL TEXT FILES (.ZIP)</span>
+        </a>
+        <a href="{% url 'download_report' project.id 'gameplay_offsets.txt' %}" download="gameplay_offsets.txt" class="btn-export-quick accent-yellow">
+            <i class="bi bi-file-earmark-text text-warning"></i>
+            <span>gameplay_offsets.txt</span>
+        </a>
+        <a href="{% url 'download_report' project.id 'analysis_report.txt' %}" download="analysis_report.txt" class="btn-export-quick">
+            <i class="bi bi-file-earmark-text text-info"></i>
+            <span>analysis_report.txt</span>
+        </a>
+        <a href="{% url 'download_report' project.id 'dump.cs' %}" download="dump.cs" class="btn-export-quick accent-pink">
+            <i class="bi bi-file-earmark-code text-danger"></i>
+            <span>dump.cs (C# Dump)</span>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Format Filter Tabs -->
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap font-mono" id="formatFilterBar">
+    <span class="text-secondary small me-1"><i class="bi bi-funnel"></i> FILTER:</span>
+    <button type="button" class="btn btn-sm btn-dark border border-cyan text-cyan active-filter-tab py-1 px-3" data-filter="ALL" style="font-size: 0.75rem;">
+        ALL FILES ({{ reports|length }})
+    </button>
+    <button type="button" class="btn btn-sm btn-dark border border-secondary text-white py-1 px-3" data-filter=".txt" style="font-size: 0.75rem;">
+        <i class="bi bi-file-earmark-text text-info me-1"></i> PLAIN TEXT (.TXT)
+    </button>
+    <button type="button" class="btn btn-sm btn-dark border border-secondary text-white py-1 px-3" data-filter=".cs" style="font-size: 0.75rem;">
+        <i class="bi bi-file-earmark-code text-warning me-1"></i> C# DUMP (.CS)
+    </button>
+    <button type="button" class="btn btn-sm btn-dark border border-secondary text-white py-1 px-3" data-filter=".csv" style="font-size: 0.75rem;">
+        <i class="bi bi-file-earmark-spreadsheet text-success me-1"></i> EXCEL (.CSV)
+    </button>
+    <button type="button" class="btn btn-sm btn-dark border border-secondary text-white py-1 px-3" data-filter=".json" style="font-size: 0.75rem;">
+        <i class="bi bi-braces text-warning me-1"></i> JSON DATA
+    </button>
+    <button type="button" class="btn btn-sm btn-dark border border-secondary text-white py-1 px-3" data-filter=".md" style="font-size: 0.75rem;">
+        <i class="bi bi-markdown text-primary me-1"></i> MARKDOWN (.MD)
+    </button>
+    <button type="button" class="btn btn-sm btn-dark border border-secondary text-white py-1 px-3" data-filter=".zip" style="font-size: 0.75rem;">
+        <i class="bi bi-file-earmark-zip text-danger me-1"></i> ZIP BUNDLES
+    </button>
+</div>
+
+<div class="glass-card mb-4 p-0">
+    <div class="p-3 border-bottom border-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <div class="card-title mb-0">
+                <i class="bi bi-file-earmark-arrow-down text-warning"></i>
+                <span>EXPORTABLE DOSSIERS // 出力可能ファイル (<span id="visibleReportCount">{{ reports|length }}</span>)</span>
+            </div>
+            <div class="card-subtitle mb-0 font-mono">Files download with their exact filename and extension for Notepad, GameGuardian, and IDA.</div>
+        </div>
     </div>
 
     <!-- Desktop Table View -->
     <div class="desktop-table-view">
         <div class="table-responsive-custom">
-            <table class="analyzer-table">
+            <table class="analyzer-table" id="reportsTable">
                 <thead>
                     <tr>
-                        <th>Report Filename</th>
-                        <th>File Format</th>
-                        <th>Size</th>
-                        <th class="text-end">Action</th>
+                        <th style="min-width: 320px;">Report Filename &amp; Contents</th>
+                        <th style="width: 180px;">Format &amp; Tool Target</th>
+                        <th style="width: 100px;">Size</th>
+                        <th class="text-end" style="width: 170px;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for r in reports %}
-                    <tr>
+                    <tr class="report-row" data-ext="{{ r.ext }}">
                         <td>
-                            <i class="bi bi-file-earmark-text text-warning me-2"></i>
-                            <span class="font-mono text-white fw-bold">{{ r.name }}</span>
+                            <div class="d-flex align-items-start gap-2">
+                                {% if r.ext == '.txt' %}
+                                    <i class="bi bi-file-earmark-text text-info fs-5 mt-1"></i>
+                                {% elif r.ext == '.cs' %}
+                                    <i class="bi bi-file-earmark-code text-warning fs-5 mt-1"></i>
+                                {% elif r.ext == '.csv' %}
+                                    <i class="bi bi-file-earmark-spreadsheet text-success fs-5 mt-1"></i>
+                                {% elif r.ext == '.json' %}
+                                    <i class="bi bi-braces text-warning fs-5 mt-1"></i>
+                                {% elif r.ext == '.md' %}
+                                    <i class="bi bi-markdown text-primary fs-5 mt-1"></i>
+                                {% elif r.ext == '.zip' %}
+                                    <i class="bi bi-file-earmark-zip text-danger fs-5 mt-1"></i>
+                                {% else %}
+                                    <i class="bi bi-file-earmark text-secondary fs-5 mt-1"></i>
+                                {% endif %}
+                                <div>
+                                    <a href="{% url 'download_report' project.id r.name %}" download="{{ r.name }}" class="font-mono text-white fw-bold text-decoration-none">
+                                        {{ r.name }}
+                                    </a>
+                                    <div class="font-mono text-secondary small pt-1" style="font-size: 0.72rem; line-height: 1.3;">
+                                        {{ r.description }}
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                         <td>
-                            {% if r.name|slice:"-3:" == ".md" %}
-                                <span class="badge-address badge-method-rva" style="font-size: 0.7rem;">MARKDOWN</span>
-                            {% elif r.name|slice:"-5:" == ".json" %}
-                                <span class="badge-address badge-field-offset" style="font-size: 0.7rem;">JSON</span>
-                            {% elif r.name|slice:"-4:" == ".csv" %}
-                                <span class="badge-address badge-va" style="font-size: 0.7rem;">CSV</span>
-                            {% else %}
-                                <span class="badge bg-secondary font-mono" style="font-size: 0.7rem;">TEXT</span>
-                            {% endif %}
+                            <span class="badge {{ r.badge_class }} font-mono py-1 px-2 mb-1 d-inline-block" style="font-size: 0.72rem;">
+                                {{ r.format_code }}
+                            </span>
+                            <div class="font-mono text-secondary" style="font-size: 0.68rem;">{{ r.format_title }}</div>
                         </td>
-                        <td class="font-mono text-secondary small">{{ r.size_kb }} KB</td>
+                        <td class="font-mono text-secondary small">
+                            <span class="text-white">{{ r.size_kb }}</span> KB
+                        </td>
                         <td class="text-end">
-                            <a href="{% url 'download_report' project.id r.name %}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
+                            <a href="{% url 'download_report' project.id r.name %}" download="{{ r.name }}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
                                 <i class="bi bi-download"></i>
                                 <span>DOWNLOAD // 出力</span>
                             </a>
@@ -113,28 +196,23 @@
     </div>
 
     <!-- Mobile Cards View -->
-    <div class="mobile-cards-view p-3">
+    <div class="mobile-cards-view p-3" id="reportsMobileList">
         <div class="d-flex flex-column gap-2">
             {% for r in reports %}
-            <div class="mobile-entity-card">
-                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <div class="mobile-entity-card report-card" data-ext="{{ r.ext }}">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                     <div class="text-break font-mono">
                         <i class="bi bi-file-earmark-text text-warning me-1"></i>
                         <span class="text-white fw-bold small">{{ r.name }}</span>
                     </div>
-                    {% if r.name|slice:"-3:" == ".md" %}
-                        <span class="badge-address badge-method-rva" style="font-size: 0.65rem;">MD</span>
-                    {% elif r.name|slice:"-5:" == ".json" %}
-                        <span class="badge-address badge-field-offset" style="font-size: 0.65rem;">JSON</span>
-                    {% elif r.name|slice:"-4:" == ".csv" %}
-                        <span class="badge-address badge-va" style="font-size: 0.65rem;">CSV</span>
-                    {% else %}
-                        <span class="badge bg-secondary font-mono" style="font-size: 0.65rem;">TXT</span>
-                    {% endif %}
+                    <span class="badge {{ r.badge_class }} font-mono" style="font-size: 0.65rem;">{{ r.format_code }}</span>
+                </div>
+                <div class="font-mono text-secondary small mb-2" style="font-size: 0.7rem;">
+                    {{ r.description }}
                 </div>
                 <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
                     <span class="font-mono text-secondary small">{{ r.size_kb }} KB</span>
-                    <a href="{% url 'download_report' project.id r.name %}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
+                    <a href="{% url 'download_report' project.id r.name %}" download="{{ r.name }}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
                         <i class="bi bi-download"></i>
                         <span>DOWNLOAD</span>
                     </a>
@@ -148,4 +226,51 @@
         </div>
     </div>
 </div>
+
+<!-- Format Filtering JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterTabs = document.querySelectorAll('#formatFilterBar button');
+    const tableRows = document.querySelectorAll('#reportsTable tbody tr.report-row');
+    const mobileCards = document.querySelectorAll('#reportsMobileList .report-card');
+    const visibleCountSpan = document.getElementById('visibleReportCount');
+
+    filterTabs.forEach(btn => {
+        btn.addEventListener('click', function () {
+            filterTabs.forEach(b => {
+                b.classList.remove('border-cyan', 'text-cyan', 'active-filter-tab');
+                b.classList.add('border-secondary', 'text-white');
+            });
+            this.classList.remove('border-secondary', 'text-white');
+            this.classList.add('border-cyan', 'text-cyan', 'active-filter-tab');
+
+            const filterExt = this.getAttribute('data-filter');
+            let visibleCount = 0;
+
+            tableRows.forEach(row => {
+                const ext = row.getAttribute('data-ext');
+                if (filterExt === 'ALL' || ext === filterExt) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            mobileCards.forEach(card => {
+                const ext = card.getAttribute('data-ext');
+                if (filterExt === 'ALL' || ext === filterExt) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            if (visibleCountSpan) {
+                visibleCountSpan.textContent = visibleCount;
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

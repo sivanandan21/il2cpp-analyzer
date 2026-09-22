@@ -5,7 +5,7 @@ comparison, reports, rules, and RESTful JSON APIs.
 """
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponse, Http404
+from django.http import JsonResponse, HttpResponse, Http404, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Avg
@@ -773,15 +773,93 @@ def reports_view(request):
         return redirect('upload')
 
     reports_dir = Path(project.get_storage_path()) / "reports"
+
+    # Auto-generate or regenerate reports if directory is missing or missing vital text dossiers
+    key_reports = ["analysis_report.txt", "gameplay_offsets.txt", "dump.cs", "all_reports.zip"]
+    needs_generation = not reports_dir.exists() or any(not (reports_dir / k).exists() for k in key_reports)
+    if needs_generation and project.status in ["COMPLETE", "ANALYZING"]:
+        from .services.report_generator import ReportGenerator
+        try:
+            ReportGenerator(project).generate_all_reports(reports_dir)
+        except Exception:
+            pass
+
+    descriptions = {
+        "gameplay_offsets.txt": "Dedicated Modder's Cheatsheet: Currency, Health, Combat, Speed, and Hook RVAs",
+        "analysis_report.txt": "Master plaintext report with target specs, ranked gameplay candidates, field offsets & RVAs",
+        "field_offsets.txt": "Complete plain text table of all field offsets sorted by class & offset",
+        "method_rvas.txt": "Complete plain text table of all method RVAs and function signatures",
+        "classes_summary.txt": "Complete plain text summary of all indexed classes & namespaces",
+        "dump.cs": "Decompiled C# source structure with field offsets and method RVAs in comments",
+        "ImportantOffsets.md": "Formatted Markdown reference of verified field offsets and method RVAs",
+        "ImportantData.md": "Formatted Markdown overview of high-confidence gameplay analytical candidates",
+        "field_offsets.csv": "Excel / Google Sheets compatible CSV spreadsheet of all field offsets",
+        "method_rvas.csv": "Excel / Google Sheets compatible CSV spreadsheet of all method RVAs",
+        "static_data.csv": "Excel / Google Sheets compatible CSV spreadsheet of static addresses",
+        "classes_ranked.json": "Machine-readable JSON array of indexed classes ranked by heuristic score",
+        "fields_ranked.json": "Machine-readable JSON array of indexed fields ranked by importance",
+        "methods_ranked.json": "Machine-readable JSON array of indexed methods with RVAs & signatures",
+        "offsets.json": "Complete machine-readable JSON array of all address records",
+        "ImportantData.json": "Machine-readable JSON summary of project statistics and candidates",
+        "all_txt_reports.zip": "All-in-one ZIP archive of all plain text reports (.txt) for Notepad",
+        "all_reports.zip": "All-in-one ZIP archive of all generated reports, dumps, and spreadsheets",
+    }
+
+    format_labels = {
+        ".txt": ("TEXT", "badge-format-txt", "Plain Text (Notepad)"),
+        ".cs": ("C# DUMP", "badge-format-cs", "Decompiled C#"),
+        ".csv": ("CSV", "badge-format-csv", "Spreadsheet (Excel)"),
+        ".json": ("JSON", "badge-format-json", "Raw JSON Data"),
+        ".md": ("MARKDOWN", "badge-format-md", "Formatted Markdown"),
+        ".zip": ("ZIP BUNDLE", "badge-format-zip", "Zip Archive"),
+    }
+
+    # Priority sorting order: plain text & C# & zips first
+    priority_order = [
+        "gameplay_offsets.txt",
+        "analysis_report.txt",
+        "field_offsets.txt",
+        "method_rvas.txt",
+        "classes_summary.txt",
+        "dump.cs",
+        "all_txt_reports.zip",
+        "all_reports.zip",
+        "ImportantOffsets.md",
+        "ImportantData.md",
+        "field_offsets.csv",
+        "method_rvas.csv",
+        "static_data.csv",
+        "classes_ranked.json",
+        "fields_ranked.json",
+        "methods_ranked.json",
+        "offsets.json",
+        "ImportantData.json"
+    ]
+
     reports_list = []
     if reports_dir.exists():
         for f in reports_dir.iterdir():
             if f.is_file():
+                ext = f.suffix.lower()
+                fmt_info = format_labels.get(ext, ("FILE", "badge-format-other", "Binary / Other"))
                 reports_list.append({
                     "name": f.name,
-                    "size_kb": round(f.stat().st_size / 1024, 1),
-                    "path": f.name
+                    "size_kb": max(0.1, round(f.stat().st_size / 1024, 1)),
+                    "path": f.name,
+                    "ext": ext,
+                    "format_code": fmt_info[0],
+                    "badge_class": fmt_info[1],
+                    "format_title": fmt_info[2],
+                    "description": descriptions.get(f.name, f"{fmt_info[2]} export artifact")
                 })
+
+    def get_sort_key(item):
+        try:
+            return priority_order.index(item["name"])
+        except ValueError:
+            return 999
+
+    reports_list.sort(key=get_sort_key)
 
     return render(request, 'analyzer/reports.html', {
         'project': project,
@@ -791,19 +869,47 @@ def reports_view(request):
 
 def download_report(request, project_id, filename):
     project = get_object_or_404(Project, id=project_id)
-    file_path = Path(project.get_storage_path()) / "reports" / filename
+    reports_dir = Path(project.get_storage_path()) / "reports"
+    file_path = reports_dir / filename
 
     # Prevent directory traversal
     if not str(file_path.resolve()).startswith(str(Path(project.get_storage_path()).resolve())):
         raise Http404("Access denied")
 
     if not file_path.exists():
+        # Auto-regenerate on the fly if file is missing
+        from .services.report_generator import ReportGenerator
+        try:
+            ReportGenerator(project).generate_all_reports(reports_dir)
+        except Exception:
+            pass
+
+    if not file_path.exists():
         raise Http404("Report not found")
 
-    with open(file_path, 'rb') as f:
-        response = HttpResponse(f.read(), content_type="application/octet-stream")
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
+    ext = file_path.suffix.lower()
+    mime_map = {
+        '.txt': 'text/plain; charset=utf-8',
+        '.cs': 'text/plain; charset=utf-8',
+        '.csv': 'text/csv; charset=utf-8',
+        '.json': 'application/json; charset=utf-8',
+        '.md': 'text/markdown; charset=utf-8',
+        '.zip': 'application/zip',
+        '.js': 'text/javascript; charset=utf-8',
+        '.py': 'text/x-python; charset=utf-8',
+    }
+    content_type = mime_map.get(ext, 'application/octet-stream')
+
+    response = FileResponse(
+        open(file_path, 'rb'),
+        content_type=content_type,
+        as_attachment=True,
+        filename=filename
+    )
+    # Ensure explicit RFC 5987 / 6266 filename headers are sent to guarantee Chrome & Edge save with extension
+    response['Content-Disposition'] = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{filename}'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 
 # =============================================================================

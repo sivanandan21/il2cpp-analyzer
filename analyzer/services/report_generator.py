@@ -16,6 +16,7 @@ Generates comprehensive analysis dossiers in Markdown, JSON, CSV, and plain text
 Preserves full provenance, verification status, and transparent score justifications.
 """
 
+import zipfile
 from typing import Dict, Any, List
 import json
 import csv
@@ -32,17 +33,35 @@ class ReportGenerator:
         output_dir.mkdir(parents=True, exist_ok=True)
         paths = {}
 
+        # 1. Plain Text Dossiers & Cheatsheets (.TXT) - Universal Notepad format
+        paths["analysis_report.txt"] = self.generate_analysis_report_txt(output_dir / "analysis_report.txt")
+        paths["gameplay_offsets.txt"] = self.generate_gameplay_offsets_txt(output_dir / "gameplay_offsets.txt")
+        paths["field_offsets.txt"] = self.generate_field_offsets_txt(output_dir / "field_offsets.txt")
+        paths["method_rvas.txt"] = self.generate_method_rvas_txt(output_dir / "method_rvas.txt")
+        paths["classes_summary.txt"] = self.generate_classes_summary_txt(output_dir / "classes_summary.txt")
+
+        # 2. Decompiled C# Dump (.CS)
+        paths["dump.cs"] = self.generate_dump_cs(output_dir / "dump.cs")
+
+        # 3. Formatted Markdown Dossiers (.MD)
         paths["ImportantData.md"] = self.generate_important_data_md(output_dir / "ImportantData.md")
-        paths["ImportantData.json"] = self.generate_important_data_json(output_dir / "ImportantData.json")
         paths["ImportantOffsets.md"] = self.generate_important_offsets_md(output_dir / "ImportantOffsets.md")
-        paths["offsets.json"] = self.generate_offsets_json(output_dir / "offsets.json")
+
+        # 4. Spreadsheets (.CSV) - Excel / Numbers
         paths["field_offsets.csv"] = self.generate_field_offsets_csv(output_dir / "field_offsets.csv")
         paths["method_rvas.csv"] = self.generate_method_rvas_csv(output_dir / "method_rvas.csv")
         paths["static_data.csv"] = self.generate_static_data_csv(output_dir / "static_data.csv")
+
+        # 5. Machine Readable Raw Dumps (.JSON)
+        paths["ImportantData.json"] = self.generate_important_data_json(output_dir / "ImportantData.json")
+        paths["offsets.json"] = self.generate_offsets_json(output_dir / "offsets.json")
         paths["classes_ranked.json"] = self.generate_classes_ranked_json(output_dir / "classes_ranked.json")
         paths["fields_ranked.json"] = self.generate_fields_ranked_json(output_dir / "fields_ranked.json")
         paths["methods_ranked.json"] = self.generate_methods_ranked_json(output_dir / "methods_ranked.json")
-        paths["analysis_report.txt"] = self.generate_analysis_report_txt(output_dir / "analysis_report.txt")
+
+        # 6. Bundled ZIP Archives (.ZIP)
+        paths["all_txt_reports.zip"] = self.generate_all_txt_zip(output_dir / "all_txt_reports.zip", output_dir)
+        paths["all_reports.zip"] = self.generate_all_reports_zip(output_dir / "all_reports.zip", output_dir)
 
         return paths
 
@@ -285,28 +304,265 @@ class ReportGenerator:
 
     def generate_analysis_report_txt(self, path: Path) -> Path:
         lines = [
-            "==================================================================",
-            "          IL2CPP GAME DATA & OFFSET ANALYZER REPORT",
-            "==================================================================",
-            f"Project:          {self.project.name}",
-            f"Platform:         {self.project.platform}",
-            f"Architecture:     {self.project.architecture}",
-            f"Binary:           {self.project.binary_name}",
-            f"Metadata Version: {self.project.metadata_version or 'N/A'}",
-            f"Status:           {self.project.status}",
-            "------------------------------------------------------------------",
-            f"Classes Indexed:  {self.project.classes_count}",
-            f"Methods Indexed:  {self.project.methods_count}",
-            f"Fields Indexed:   {self.project.fields_count}",
-            f"Warnings Logged:  {self.project.warnings_count}",
-            "------------------------------------------------------------------",
-            "ADDRESS RECORD SUMMARY:",
-            f"  Field Offsets:     {self.project.address_records.filter(address_type='FIELD_OFFSET').count()}",
-            f"  Method RVAs:       {self.project.address_records.filter(address_type='METHOD_RVA').count()}",
-            f"  Static Addresses:  {self.project.address_records.filter(address_type='STATIC_ADDRESS').count()}",
-            f"  Virtual Addresses: {self.project.address_records.filter(address_type='VIRTUAL_ADDRESS').count()}",
-            f"  File Offsets:      {self.project.address_records.filter(address_type='FILE_OFFSET').count()}",
-            "=================================================================="
+            "==================================================================================",
+            "             IL2CPP TACTICAL ANALYZER // MASTER ANALYSIS DOSSIER                  ",
+            "==================================================================================",
+            f"Target Project:    {self.project.name} (ID: {self.project.id})",
+            f"Platform:          {self.project.platform}",
+            f"Architecture:      {self.project.architecture}",
+            f"Engine Type:       {self.project.engine_type or 'Unity (IL2CPP)'}",
+            f"Binary Payload:    {self.project.binary_name}",
+            f"Metadata Version:  {self.project.metadata_version or 'N/A'}",
+            f"Analysis Status:   {self.project.status}",
+            f"Classes Indexed:   {self.project.classes_count}",
+            f"Fields Indexed:    {self.project.fields_count}",
+            f"Methods Indexed:   {self.project.methods_count}",
+            f"Warnings Logged:   {self.project.warnings_count}",
+            "----------------------------------------------------------------------------------",
+            "ADDRESS RECORD BREAKDOWN:",
+            f"  - Field Offsets:     {self.project.address_records.filter(address_type='FIELD_OFFSET').count()}",
+            f"  - Method RVAs:       {self.project.address_records.filter(address_type='METHOD_RVA').count()}",
+            f"  - Static Addresses:  {self.project.address_records.filter(address_type='STATIC_ADDRESS').count()}",
+            f"  - Virtual Addresses: {self.project.address_records.filter(address_type='VIRTUAL_ADDRESS').count()}",
+            "==================================================================================",
+            "",
+            "==================================================================================",
+            "[ 01 ] TOP GAMEPLAY CANDIDATE CLASSES (RANKED BY RELEVANCE SCORE)",
+            "==================================================================================",
+            f"{'SCORE':<7}{'CATEGORY':<14}{'FIELDS':<8}{'METHODS':<9}{'CLASS NAME'}",
+            "-" * 82
         ]
+
+        top_classes = self.project.classes.all().order_by('-importance_score')[:50]
+        for c in top_classes:
+            lines.append(f"{c.importance_score:<7}{c.primary_category:<14}{c.fields.count():<8}{c.methods.count():<9}{c.name}")
+
+        lines.extend([
+            "",
+            "==================================================================================",
+            "[ 02 ] HIGH-CONFIDENCE GAMEPLAY VARIABLES & FIELD OFFSETS",
+            "==================================================================================",
+            f"{'OFFSET':<10}{'DEC':<6}{'CATEGORY':<14}{'TYPE':<16}{'FIELD IDENTIFIER'}",
+            "-" * 82
+        ])
+
+        top_fields = self.project.address_records.filter(address_type="FIELD_OFFSET").select_related('field_def', 'field_def__class_def').order_by('-field_def__importance_score', 'class_name', 'value_int')[:150]
+        for a in top_fields:
+            f = a.field_def
+            cat = f.primary_category if f else "GENERAL"
+            tname = (f.type_name if f else "unknown")[:15]
+            ident = f"{a.class_name}.{a.member_name}"
+            lines.append(f"{a.value_hex:<10}{a.value_int:<6}{cat:<14}{tname:<16}{ident}")
+
+        lines.extend([
+            "",
+            "==================================================================================",
+            "[ 03 ] VERIFIED METHOD RVAS (HOOK & REVERSE TARGETS)",
+            "==================================================================================",
+            f"{'RVA':<14}{'CATEGORY':<14}{'METHOD SIGNATURE'}",
+            "-" * 82
+        ])
+
+        top_methods = self.project.address_records.filter(address_type="METHOD_RVA").select_related('method_def').order_by('-method_def__importance_score', 'value_int')[:150]
+        for a in top_methods:
+            m = a.method_def
+            cat = m.primary_category if m else "GENERAL"
+            sig = (m.signature if m else f"{a.class_name}.{a.member_name}()")
+            lines.append(f"{a.value_hex:<14}{cat:<14}{sig}")
+
+        lines.extend([
+            "",
+            "==================================================================================",
+            "                      END OF ANALYSIS REPORT DOSSIER                              ",
+            "=================================================================================="
+        ])
+
         path.write_text("\n".join(lines), encoding="utf-8")
+        return path
+
+    def generate_gameplay_offsets_txt(self, path: Path) -> Path:
+        """
+        Generates a dedicated plain text cheatsheet grouping offsets by modding category:
+        Currency, Health/Stats, Combat, Speed, God Mode, Security, and Method RVAs.
+        """
+        lines = [
+            "==================================================================================",
+            "           TACTICAL IL2CPP ANALYZER // GAMEPLAY OFFSETS CHEATSHEET                ",
+            "==================================================================================",
+            f"Target:        {self.project.name}",
+            f"Architecture:  {self.project.architecture}",
+            f"Engine:        {self.project.engine_type or 'Unity (IL2CPP)'}",
+            "Usage:         Plain text cheatsheet for GameGuardian, Cheat Engine, Frida, & IDA.",
+            "Provenance:    Strict Separation: FIELD OFFSET != METHOD RVA != VIRTUAL ADDRESS",
+            "==================================================================================",
+            ""
+        ]
+
+        categories = [
+            ("CURRENCY", "CURRENCY & ECONOMY OFFSETS (Gold, Gems, Coins, Cash, Money)"),
+            ("HEALTH", "HEALTH, MANA & PLAYER ATTRIBUTES (HP, Stamina, Shield)"),
+            ("STATS", "PLAYER STATS & LEVEL PROGRESSION (XP, Level, Rank, Energy)"),
+            ("COMBAT", "COMBAT & WEAPON OFFSETS (Attack, Damage, Ammo, FireRate)"),
+            ("SPEED", "MOVEMENT & SPEED OFFSETS (RunSpeed, WalkSpeed, Velocity, Jump)"),
+            ("SECURITY", "SECURITY & ANTI-CHEAT OFFSETS (Ban, Verification, Tamper, Root)"),
+            ("PHYSICS", "PHYSICS & WORLD MODIFIERS (Gravity, Collision, Mass)"),
+            ("GENERAL", "GENERAL GAMEPLAY OFFSETS"),
+        ]
+
+        field_records = list(self.project.address_records.filter(address_type="FIELD_OFFSET").select_related('field_def', 'field_def__class_def'))
+
+        for cat_code, cat_title in categories:
+            cat_items = [a for a in field_records if (a.field_def and a.field_def.primary_category == cat_code)]
+            if not cat_items and cat_code in ["CURRENCY", "HEALTH", "COMBAT", "SPEED"]:
+                # Try fallback matching by keyword if category was unclassified
+                cat_items = [a for a in field_records if any(k in a.member_name.lower() for k in [cat_code.lower()])]
+
+            lines.append(f">>> {cat_title} [{len(cat_items)} Found] <<<")
+            lines.append(f"{'OFFSET':<10}{'DEC':<6}{'TYPE':<16}{'CLASS.FIELD':<40}{'CONFIDENCE'}")
+            lines.append("-" * 82)
+
+            if cat_items:
+                cat_items.sort(key=lambda x: (x.class_name, x.value_int))
+                for a in cat_items:
+                    f = a.field_def
+                    tname = (f.type_name if f else "var")[:15]
+                    ident = f"{a.class_name}.{a.member_name}"
+                    conf = a.confidence or "HIGH"
+                    lines.append(f"{a.value_hex:<10}{a.value_int:<6}{tname:<16}{ident:<40}{conf}")
+            else:
+                lines.append("  [ No direct offsets recorded under this category ]")
+            lines.append("")
+
+        # Add Top Method RVAs
+        lines.append(">>> KEY METHOD RVAs FOR FUNCTION HOOKING (FRIDA / GAMEGUARDIAN) <<<")
+        lines.append(f"{'RVA':<14}{'CATEGORY':<14}{'METHOD SIGNATURE'}")
+        lines.append("-" * 82)
+        top_methods = self.project.address_records.filter(address_type="METHOD_RVA").select_related('method_def').order_by('-method_def__importance_score')[:100]
+        for a in top_methods:
+            m = a.method_def
+            cat = m.primary_category if m else "GENERAL"
+            sig = (m.signature if m else f"{a.class_name}.{a.member_name}()")
+            lines.append(f"{a.value_hex:<14}{cat:<14}{sig}")
+
+        lines.extend([
+            "",
+            "==================================================================================",
+            "                   END OF GAMEPLAY OFFSETS CHEATSHEET                             ",
+            "=================================================================================="
+        ])
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return path
+
+    def generate_field_offsets_txt(self, path: Path) -> Path:
+        """Generates all field offsets in a clean, aligned plain text table."""
+        lines = [
+            f"# IL2CPP Field Offsets Table - {self.project.name} ({self.project.architecture})",
+            f"{'OFFSET (HEX)':<14}{'DEC':<8}{'TYPE':<18}{'CLASS':<36}{'FIELD':<28}{'CATEGORY'}",
+            "=" * 120
+        ]
+        fields = self.project.address_records.filter(address_type="FIELD_OFFSET").select_related('field_def').order_by('class_name', 'value_int')
+        for a in fields:
+            f = a.field_def
+            tname = (f.type_name if f else "")[:16]
+            cat = f.primary_category if f else ""
+            lines.append(f"{a.value_hex:<14}{a.value_int:<8}{tname:<18}{a.class_name[:34]:<36}{a.member_name[:26]:<28}{cat}")
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return path
+
+    def generate_method_rvas_txt(self, path: Path) -> Path:
+        """Generates all method RVAs in a clean, aligned plain text table."""
+        lines = [
+            f"# IL2CPP Method RVAs Table - {self.project.name} ({self.project.architecture})",
+            f"{'RVA (HEX)':<16}{'DEC':<12}{'CATEGORY':<14}{'CLASS.METHOD SIGNATURE'}",
+            "=" * 120
+        ]
+        methods = self.project.address_records.filter(address_type="METHOD_RVA").select_related('method_def').order_by('value_int')
+        for a in methods:
+            m = a.method_def
+            cat = m.primary_category if m else ""
+            sig = m.signature if m else f"{a.class_name}.{a.member_name}()"
+            lines.append(f"{a.value_hex:<16}{a.value_int:<12}{cat:<14}{sig}")
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return path
+
+    def generate_classes_summary_txt(self, path: Path) -> Path:
+        """Generates a summary of all classes in a clean, aligned plain text table."""
+        lines = [
+            f"# IL2CPP Classes Summary - {self.project.name}",
+            f"{'SCORE':<8}{'FIELDS':<8}{'METHODS':<9}{'CATEGORY':<14}{'NAMESPACE':<30}{'CLASS NAME'}",
+            "=" * 120
+        ]
+        classes = self.project.classes.all().order_by('-importance_score')
+        for c in classes:
+            ns = (c.namespace or "-")[:28]
+            lines.append(f"{c.importance_score:<8}{c.fields.count():<8}{c.methods.count():<9}{c.primary_category:<14}{ns:<30}{c.name}")
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return path
+
+    def generate_dump_cs(self, path: Path) -> Path:
+        """Generates a decompiled C# structure dump with offsets and RVAs."""
+        lines = [
+            "// ============================================================================",
+            f"// IL2CPP Decompiled C# Structure Dump",
+            f"// Target:       {self.project.name}",
+            f"// Architecture: {self.project.architecture}",
+            f"// Generated:    Tactical IL2CPP Analyzer",
+            "// ============================================================================",
+            ""
+        ]
+
+        classes = self.project.classes.prefetch_related('fields', 'methods').all()[:200]
+        for c in classes:
+            if c.namespace:
+                lines.append(f"namespace {c.namespace} {{")
+                indent = "    "
+            else:
+                indent = ""
+
+            base = f" : {c.base_class_name}" if c.base_class_name else ""
+            lines.append(f"{indent}// Importance Score: {c.importance_score} | Category: {c.primary_category}")
+            lines.append(f"{indent}public class {c.name}{base} {{")
+
+            fields = c.fields.all()
+            if fields:
+                lines.append(f"{indent}    // Fields ({fields.count()})")
+                for f in fields:
+                    off_comment = f" // Offset: {f.offset_hex} (Dec: {f.offset_value})" if f.offset_hex else ""
+                    stat = "static " if f.is_static else ""
+                    lines.append(f"{indent}    {f.visibility} {stat}{f.type_name} {f.name};{off_comment}")
+
+            methods = c.methods.all()
+            if methods:
+                lines.append(f"{indent}    // Methods ({methods.count()})")
+                for m in methods:
+                    rva_comment = f" // RVA: {m.rva_hex}" if m.rva_hex else ""
+                    lines.append(f"{indent}    // Category: {m.primary_category}{rva_comment}")
+                    lines.append(f"{indent}    {m.signature};")
+
+            lines.append(f"{indent}}}")
+            if c.namespace:
+                lines.append("}")
+            lines.append("")
+
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return path
+
+    def generate_all_txt_zip(self, path: Path, output_dir: Path) -> Path:
+        """Bundles all .txt reports into a single zip archive."""
+        with zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+            for f in output_dir.glob("*.txt"):
+                if f.is_file():
+                    zf.write(f, arcname=f.name)
+        return path
+
+    def generate_all_reports_zip(self, path: Path, output_dir: Path) -> Path:
+        """Bundles all generated reports (excluding zip files) into a single zip archive."""
+        with zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+            for f in output_dir.iterdir():
+                if f.is_file() and not f.name.endswith(".zip"):
+                    zf.write(f, arcname=f.name)
         return path

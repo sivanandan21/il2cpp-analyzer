@@ -41,7 +41,8 @@ urlpatterns = [
     path('rules/', views.rule_list, name='rule_list'),
     path('rules/<int:rule_id>/delete/', views.rule_delete, name='rule_delete'),
     path('reports/', views.reports_view, name='reports_view'),
-    path('reports/<int:project_id>/<str:filename>/', views.download_report, name='download_report'),
+    path('reports/<int:project_id>/<str:filename>', views.download_report, name='download_report'),
+    path('reports/<int:project_id>/<str:filename>/', views.download_report),
 
     # REST APIs
     path('api/projects/', views.api_projects, name='api_projects'),

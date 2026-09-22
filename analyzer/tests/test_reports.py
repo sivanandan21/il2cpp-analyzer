@@ -52,6 +52,10 @@ class ReportGeneratorTests(TestCase):
             self.assertIn("ImportantData.md", paths)
             self.assertIn("offsets.json", paths)
             self.assertIn("field_offsets.csv", paths)
+            self.assertIn("analysis_report.txt", paths)
+            self.assertIn("gameplay_offsets.txt", paths)
+            self.assertIn("dump.cs", paths)
+            self.assertIn("all_reports.zip", paths)
 
             # Check markdown content
             md_text = paths["ImportantData.md"].read_text(encoding="utf-8")
@@ -62,5 +66,36 @@ class ReportGeneratorTests(TestCase):
             csv_text = paths["field_offsets.csv"].read_text(encoding="utf-8")
             self.assertIn("0x18", csv_text)
             self.assertIn("SampleStats", csv_text)
+
+            # Check Plain Text content
+            txt_report = paths["analysis_report.txt"].read_text(encoding="utf-8")
+            self.assertIn("SampleStats", txt_report)
+            self.assertIn("0x18", txt_report)
+
+            gameplay_txt = paths["gameplay_offsets.txt"].read_text(encoding="utf-8")
+            self.assertIn("0x18", gameplay_txt)
+            self.assertIn("SampleStats.hp", gameplay_txt)
+
+            # Check C# dump content
+            cs_dump = paths["dump.cs"].read_text(encoding="utf-8")
+            self.assertIn("public class SampleStats", cs_dump)
+            self.assertIn("0x18", cs_dump)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_download_report_endpoint(self):
+        from django.test import Client
+        client = Client()
+        # Test download without trailing slash
+        response = client.get(f'/reports/{self.project.id}/gameplay_offsets.txt')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+        self.assertIn('gameplay_offsets.txt', response.headers.get('Content-Disposition'))
+        self.assertIn("filename*=UTF-8''gameplay_offsets.txt", response.headers.get('Content-Disposition'))
+
+        # Test download with trailing slash fallback
+        response_slash = client.get(f'/reports/{self.project.id}/analysis_report.txt/')
+        self.assertEqual(response_slash.status_code, 200)
+        self.assertEqual(response_slash.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+        self.assertIn('analysis_report.txt', response_slash.headers.get('Content-Disposition'))
+
