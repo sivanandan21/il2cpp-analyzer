@@ -72,15 +72,13 @@
     font-size: 0.65rem;
   }
 
-  /* Horizontally Scrollable Touch Carousel */
+  /* Clean Wrapping Categories (No Sliding Bar) */
   .pill-tabs-container {
     display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
     padding-bottom: 6px;
-    gap: 6px;
+    gap: 5px;
   }
   .pill-tabs-container::-webkit-scrollbar {
     display: none;
@@ -88,8 +86,8 @@
 
   .pill-tab-item {
     flex-shrink: 0;
-    padding: 7px 14px !important;
-    font-size: 0.78rem !important;
+    padding: 5px 10px !important;
+    font-size: 0.74rem !important;
   }
 
   /* Dual View Control: Hide Desktop Table, Show Mobile Cards */

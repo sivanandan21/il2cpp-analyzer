@@ -3,6 +3,38 @@
 {% block title %}{{ project.name }} // プロジェクト仕様書 &bull; IL2CPP Analyzer{% endblock %}
 
 {% block content %}
+<!-- Active Target Context & Quick Subpage Switcher -->
+<div class="glass-card mb-3 p-2 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: rgba(0, 240, 255, 0.03); border-left: 4px solid var(--cyber-cyan);">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="anime-tag" style="background: var(--cyber-cyan); color: #000; font-size: 0.7rem;">[ ACTIVE TARGET ]</span>
+        <strong class="text-white font-mono small">{{ project.name }}</strong>
+        <span class="badge-address badge-field-offset" style="font-size: 0.65rem; padding: 2px 6px;">{{ project.engine_type }} // {{ project.architecture }}</span>
+    </div>
+    <div class="d-flex gap-1 flex-wrap font-mono">
+        <a href="{% url 'dashboard' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-speedometer2"></i> Overview
+        </a>
+        <a href="{% url 'class_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-boxes"></i> Classes
+        </a>
+        <a href="{% url 'field_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-hash"></i> Fields
+        </a>
+        <a href="{% url 'method_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-braces"></i> Methods
+        </a>
+        <a href="{% url 'offset_center' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-warning text-warning py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-compass-fill"></i> Offsets
+        </a>
+        <a href="{% url 'graph_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-diagram-3"></i> Graph
+        </a>
+        <a href="{% url 'reports_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-file-earmark-arrow-down"></i> Exports
+        </a>
+    </div>
+</div>
+
 <!-- Top Header -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
     <div>
@@ -20,13 +52,21 @@
         <p class="text-secondary small mb-0 font-mono">{{ project.description|default:"No description provided." }}</p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-        <a href="{% url 'offset_center' %}?project_id={{ project.id }}" class="btn-action-primary">
+        <a href="{% url 'dashboard' %}?project_id={{ project.id }}" class="btn-action-primary">
+            <i class="bi bi-speedometer2"></i>
+            <span>VITAL DOSSIER // 台帳</span>
+        </a>
+        <a href="{% url 'class_list' %}?project_id={{ project.id }}" class="btn-action-secondary">
+            <i class="bi bi-boxes"></i>
+            <span>CLASSES</span>
+        </a>
+        <a href="{% url 'offset_center' %}?project_id={{ project.id }}" class="btn-action-secondary text-warning">
             <i class="bi bi-compass-fill"></i>
-            <span>OFFSET CENTER // 照合</span>
+            <span>OFFSETS</span>
         </a>
         <a href="{% url 'reports_view' %}?project_id={{ project.id }}" class="btn-action-secondary">
             <i class="bi bi-file-earmark-arrow-down"></i>
-            <span>REPORTS // 出力</span>
+            <span>EXPORTS</span>
         </a>
         <a href="{% url 'project_delete' project.id %}" class="btn btn-outline-danger btn-sm py-2 px-3 font-mono" style="border-radius: 0;" title="Delete Project">
             <i class="bi bi-trash"></i>

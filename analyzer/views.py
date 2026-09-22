@@ -29,7 +29,12 @@ from .services.semantic_analyzer import GAMEPLAY_CATEGORIES
 
 
 def get_active_project(request):
-    """Helper to retrieve explicitly selected project. Does not auto-fallback to sample data."""
+    """
+    Helper to retrieve explicitly selected project.
+    If 'new=1' or 'upload=1', clears the active session and returns None (showing upload dropzone).
+    Otherwise, retrieves project by query parameter 'project_id' or session.
+    If none is set and not an explicit upload action, falls back to the most recent completed project.
+    """
     if request.GET.get('new') == '1' or request.GET.get('upload') == '1':
         request.session.pop('active_project_id', None)
         return None
@@ -42,6 +47,15 @@ def get_active_project(request):
             return p
         except Project.DoesNotExist:
             request.session.pop('active_project_id', None)
+
+    # Fallback to the latest real analyzed project if available
+    latest = Project.objects.exclude(name__icontains='synthetic').filter(status='COMPLETE').order_by('-created_at').first()
+    if not latest:
+        latest = Project.objects.exclude(name__icontains='synthetic').order_by('-created_at').first()
+    if latest:
+        request.session['active_project_id'] = latest.id
+        return latest
+
     return None
 
 
@@ -57,6 +71,9 @@ def dashboard(request):
             if not name:
                 name = Path(uploaded_file.name).stem.replace('_', ' ').replace('-', ' ').title()
             description = request.POST.get('description', '').strip()
+
+            # Ensure host disk space is sufficient
+            ProjectManager.ensure_free_disk_space(1500)
 
             project = Project.objects.create(
                 name=name,
@@ -210,6 +227,9 @@ def upload_view(request):
             if not name:
                 name = Path(uploaded_file.name).stem.replace('_', ' ').replace('-', ' ').title()
             description = request.POST.get('description', '').strip()
+
+            # Ensure host disk space is sufficient
+            ProjectManager.ensure_free_disk_space(1500)
 
             project = Project.objects.create(
                 name=name,

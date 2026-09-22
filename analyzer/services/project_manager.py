@@ -37,8 +37,34 @@ class ProjectManager:
     """Orchestrates analysis pipelines, database ingestion, and job tracking."""
 
     @classmethod
+    def ensure_free_disk_space(cls, min_free_mb: int = 1500) -> None:
+        """
+        Safeguards host disk space by cleaning up old temporary extraction caches
+        (such as old apktool_out directories in media/projects) when free space is low.
+        """
+        from django.conf import settings
+        storage_base = Path(settings.MEDIA_ROOT) / "projects"
+        if not storage_base.exists():
+            return
+        try:
+            total, used, free = shutil.disk_usage(storage_base)
+            free_mb = free / (1024 * 1024)
+            if free_mb < min_free_mb:
+                for proj_dir in storage_base.iterdir():
+                    if proj_dir.is_dir():
+                        apktool_out = proj_dir / "apktool_out"
+                        if apktool_out.exists():
+                            shutil.rmtree(apktool_out, ignore_errors=True)
+                        extracted = proj_dir / "extracted"
+                        if extracted.exists():
+                            shutil.rmtree(extracted, ignore_errors=True)
+        except Exception:
+            pass
+
+    @classmethod
     def process_project(cls, project_id: int, file_path: Path) -> Dict[str, Any]:
         """Runs the complete analysis pipeline for a Project."""
+        cls.ensure_free_disk_space(1500)
         from analyzer.models import (
             Project, Assembly, Namespace, ClassDefinition, FieldDefinition,
             MethodDefinition, ParameterDefinition, PropertyDefinition,

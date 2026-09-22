@@ -3,6 +3,40 @@
 {% block title %}Field Explorer // 変数構造探索 &bull; IL2CPP Analyzer{% endblock %}
 
 {% block content %}
+<!-- Active Target Context & Quick Subpage Switcher -->
+{% if project %}
+<div class="glass-card mb-3 p-2 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: rgba(0, 240, 255, 0.03); border-left: 4px solid var(--cyber-cyan);">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="anime-tag" style="background: var(--cyber-cyan); color: #000; font-size: 0.7rem;">[ ACTIVE TARGET ]</span>
+        <strong class="text-white font-mono small">{{ project.name }}</strong>
+        <span class="badge-address badge-field-offset" style="font-size: 0.65rem; padding: 2px 6px;">{{ project.engine_type }} // {{ project.architecture }}</span>
+    </div>
+    <div class="d-flex gap-1 flex-wrap font-mono">
+        <a href="{% url 'dashboard' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-speedometer2"></i> Overview
+        </a>
+        <a href="{% url 'class_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-boxes"></i> Classes
+        </a>
+        <a href="{% url 'field_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-success text-success py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-hash"></i> Fields
+        </a>
+        <a href="{% url 'method_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-braces"></i> Methods
+        </a>
+        <a href="{% url 'offset_center' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-warning text-warning py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-compass-fill"></i> Offsets
+        </a>
+        <a href="{% url 'graph_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-diagram-3"></i> Graph
+        </a>
+        <a href="{% url 'reports_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-file-earmark-arrow-down"></i> Exports
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
     <div>
         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
@@ -13,7 +47,7 @@
         <p class="text-secondary small mb-0 font-mono">Discover and inspect instance member variables and verified field displacements.</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="{% url 'offset_center' %}?tab=FIELD_OFFSET" class="btn-action-primary">
+        <a href="{% url 'offset_center' %}?tab=FIELD_OFFSET{% if project %}&project_id={{ project.id }}{% endif %}" class="btn-action-primary">
             <i class="bi bi-compass-fill"></i>
             <span>FIELD OFFSETS ONLY // 変位のみ</span>
         </a>
@@ -22,11 +56,11 @@
 
 <!-- Category Quick Pills Carousel -->
 <div class="pill-tabs-container mb-3">
-    <a href="{% url 'field_list' %}{% if current_q %}?q={{ current_q }}{% endif %}" class="pill-tab-item {% if not current_category or current_category == 'ALL' %}active{% endif %}">
+    <a href="{% url 'field_list' %}?project_id={{ project.id }}{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if not current_category or current_category == 'ALL' %}active{% endif %}">
         ALL FIELDS // 全変数
     </a>
     {% for cat in categories %}
-    <a href="{% url 'field_list' %}?category={{ cat }}{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_category == cat %}active{% endif %}">
+    <a href="{% url 'field_list' %}?project_id={{ project.id }}&category={{ cat }}{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_category == cat %}active{% endif %}">
         {{ cat }}
     </a>
     {% endfor %}
@@ -35,6 +69,9 @@
 <!-- Filters Bar -->
 <div class="glass-card mb-4 p-3">
     <form method="get" class="row g-2 align-items-center">
+        {% if project %}
+        <input type="hidden" name="project_id" value="{{ project.id }}">
+        {% endif %}
         <div class="col-12 col-md-5">
             <div class="input-group">
                 <span class="input-group-text bg-black border-2 border-dark text-warning"><i class="bi bi-search"></i></span>
@@ -192,13 +229,13 @@
     <nav>
         <ul class="pagination pagination-sm gap-1">
             {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page=1{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">&laquo; First</a></li>
-                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.previous_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Prev</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page=1{% if project %}&project_id={{ project.id }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">&laquo; First</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.previous_page_number }}{% if project %}&project_id={{ project.id }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Prev</a></li>
             {% endif %}
             <li class="page-item disabled"><span class="page-link bg-black text-warning border-2 border-dark px-3 py-2 font-mono fw-bold">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
             {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.next_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Next</a></li>
-                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.paginator.num_pages }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Last &raquo;</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.next_page_number }}{% if project %}&project_id={{ project.id }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Next</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.paginator.num_pages }}{% if project %}&project_id={{ project.id }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Last &raquo;</a></li>
             {% endif %}
         </ul>
     </nav>

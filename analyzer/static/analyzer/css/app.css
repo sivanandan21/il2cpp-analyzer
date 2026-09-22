@@ -722,14 +722,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .pill-tabs-container {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding: 4px 2px 8px;
-}
-.pill-tabs-container::-webkit-scrollbar {
-  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  overflow-x: visible;
+  padding: 4px 0 8px;
 }
 
 .pill-tab-item {
@@ -737,13 +733,13 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 5px 12px;
   background: var(--cyber-surface);
   color: #cbd5e1;
   border: 2px solid #000000;
-  box-shadow: 3px 3px 0px #000000;
+  box-shadow: 2px 2px 0px #000000;
   font-family: var(--font-anime);
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;

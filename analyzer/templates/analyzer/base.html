@@ -30,7 +30,7 @@
 <header class="site-header">
     <div class="header-container">
         <!-- Brand Area -->
-        <a href="{% url 'dashboard' %}" class="brand-area">
+        <a href="{% url 'dashboard' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="brand-area">
             <div class="brand-logo-badge">
                 <i class="bi bi-cpu-fill"></i>
             </div>
@@ -42,29 +42,37 @@
 
         <!-- Desktop Tactical Nav -->
         <nav class="desktop-nav">
-            <a href="{% url 'dashboard' %}?new=1" class="nav-item-link {% if request.resolver_match.url_name == 'dashboard' and not active_project %}active{% endif %}">
-                <i class="bi bi-cloud-arrow-up-fill" style="color: var(--cyber-pink);"></i> APK UPLOAD
+            {% if active_project %}
+            <a href="{% url 'dashboard' %}?project_id={{ active_project.id }}" class="nav-item-link {% if request.resolver_match.url_name == 'dashboard' and active_project %}active{% endif %}">
+                <i class="bi bi-speedometer2" style="color: var(--cyber-cyan);"></i> DOSSIER
             </a>
-            <a href="{% url 'offset_center' %}" class="nav-item-link {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-compass-fill" style="color: var(--cyber-yellow);"></i> OFFSETS
+            {% endif %}
+            <a href="{% url 'project_list' %}" class="nav-item-link {% if request.resolver_match.url_name == 'project_list' %}active{% endif %}">
+                <i class="bi bi-collection-fill" style="color: var(--cyber-yellow);"></i> PROJECTS
             </a>
-            <a href="{% url 'class_list' %}" class="nav-item-link {% if 'class' in request.resolver_match.url_name %}active{% endif %}">
+            <a href="{% url 'class_list' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="nav-item-link {% if 'class' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-boxes" style="color: var(--cyber-cyan);"></i> CLASSES
             </a>
-            <a href="{% url 'field_list' %}" class="nav-item-link {% if 'field' in request.resolver_match.url_name %}active{% endif %}">
+            <a href="{% url 'field_list' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="nav-item-link {% if 'field' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-hash" style="color: var(--cyber-green);"></i> FIELDS
             </a>
-            <a href="{% url 'method_list' %}" class="nav-item-link {% if 'method' in request.resolver_match.url_name %}active{% endif %}">
+            <a href="{% url 'method_list' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="nav-item-link {% if 'method' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-braces" style="color: var(--cyber-purple);"></i> METHODS
             </a>
-            <a href="{% url 'graph_view' %}" class="nav-item-link {% if request.resolver_match.url_name == 'graph_view' %}active{% endif %}">
+            <a href="{% url 'offset_center' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="nav-item-link {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-compass-fill" style="color: var(--cyber-yellow);"></i> OFFSETS
+            </a>
+            <a href="{% url 'graph_view' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="nav-item-link {% if request.resolver_match.url_name == 'graph_view' %}active{% endif %}">
                 <i class="bi bi-diagram-3-fill"></i> GRAPH
             </a>
             <a href="{% url 'project_compare' %}" class="nav-item-link {% if request.resolver_match.url_name == 'project_compare' %}active{% endif %}">
                 <i class="bi bi-arrow-left-right"></i> DIFF
             </a>
-            <a href="{% url 'reports_view' %}" class="nav-item-link {% if request.resolver_match.url_name == 'reports_view' %}active{% endif %}">
+            <a href="{% url 'reports_view' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="nav-item-link {% if request.resolver_match.url_name == 'reports_view' %}active{% endif %}">
                 <i class="bi bi-file-earmark-arrow-down-fill"></i> EXPORTS
+            </a>
+            <a href="{% url 'dashboard' %}?new=1" class="nav-item-link {% if request.resolver_match.url_name == 'dashboard' and not active_project %}active{% endif %}">
+                <i class="bi bi-cloud-arrow-up-fill" style="color: var(--cyber-pink);"></i> APK UPLOAD
             </a>
         </nav>
 
@@ -77,16 +85,64 @@
                 <kbd>Ctrl+K</kbd>
             </button>
 
-            <!-- Active Target Tag -->
+            <!-- Active Target Game Switcher Dropdown -->
             {% if active_project %}
-                <a href="{% url 'project_detail' active_project.id %}" class="btn-action-secondary d-none d-md-inline-flex" title="Active Project">
+            <div class="dropdown d-none d-md-inline-block">
+                <button class="btn-action-secondary dropdown-toggle d-flex align-items-center gap-2" type="button" id="targetDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" style="padding: 5px 10px;">
                     <span class="badge-address badge-field-offset" style="padding: 2px 6px; font-size: 0.7rem;">
                         {{ active_project.architecture }}
                     </span>
-                    <span style="font-size: 0.8rem; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <span style="font-size: 0.82rem; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: bold; color: #fff;">
                         {{ active_project.name }}
                     </span>
-                </a>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-2 border-dark" aria-labelledby="targetDropdownBtn" style="background: #080a14; box-shadow: 6px 6px 0px #000; min-width: 280px; border-radius: 0;">
+                    <li class="dropdown-header font-mono text-warning" style="font-size: 0.72rem;">// SWITCH ACTIVE TARGET</li>
+                    {% for p in all_projects %}
+                    <li>
+                        <a class="dropdown-item font-mono small d-flex justify-content-between align-items-center py-2 {% if p.id == active_project.id %}active bg-dark text-warning fw-bold{% else %}text-white{% endif %}" href="{% url 'dashboard' %}?project_id={{ p.id }}">
+                            <span class="text-truncate" style="max-width: 180px;">{{ p.name }}</span>
+                            <span class="badge bg-secondary" style="font-size: 0.65rem;">{{ p.architecture }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider border-secondary my-1"></li>
+                    <li>
+                        <a class="dropdown-item font-mono small text-info py-2" href="{% url 'project_list' %}">
+                            <i class="bi bi-collection-fill me-1"></i> VIEW ALL PROJECTS ({{ total_projects_count }})
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item font-mono small py-2" href="{% url 'dashboard' %}?new=1" style="color: var(--cyber-pink);">
+                            <i class="bi bi-cloud-arrow-up-fill me-1"></i> + DECOMPILE NEW APK
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            {% elif all_projects %}
+            <div class="dropdown d-none d-md-inline-block">
+                <button class="btn-action-secondary dropdown-toggle d-flex align-items-center gap-2" type="button" id="targetDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" style="padding: 5px 10px;">
+                    <i class="bi bi-controller text-warning"></i>
+                    <span style="font-size: 0.82rem; font-weight: bold; color: #fff;">SELECT TARGET GAME</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-2 border-dark" aria-labelledby="targetDropdownBtn" style="background: #080a14; box-shadow: 6px 6px 0px #000; min-width: 280px; border-radius: 0;">
+                    <li class="dropdown-header font-mono text-warning" style="font-size: 0.72rem;">// AVAILABLE TARGETS ({{ total_projects_count }})</li>
+                    {% for p in all_projects %}
+                    <li>
+                        <a class="dropdown-item font-mono small d-flex justify-content-between align-items-center py-2 text-white" href="{% url 'dashboard' %}?project_id={{ p.id }}">
+                            <span class="text-truncate" style="max-width: 180px;">{{ p.name }}</span>
+                            <span class="badge bg-secondary" style="font-size: 0.65rem;">{{ p.architecture }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider border-secondary my-1"></li>
+                    <li>
+                        <a class="dropdown-item font-mono small py-2" href="{% url 'dashboard' %}?new=1" style="color: var(--cyber-pink);">
+                            <i class="bi bi-cloud-arrow-up-fill me-1"></i> + DECOMPILE NEW APK
+                        </a>
+                    </li>
+                </ul>
+            </div>
             {% endif %}
 
             <!-- Upload Action -->
@@ -110,60 +166,78 @@
 
 <!-- Tactical Anime Mobile Bottom App Bar -->
 <nav class="mobile-bottom-bar">
-    <a href="{% url 'dashboard' %}" class="mobile-nav-btn {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-        <i class="bi bi-cloud-arrow-up{% if request.resolver_match.url_name == 'dashboard' %}-fill{% endif %}"></i>
-        <span>UPLOAD</span>
+    <a href="{% url 'dashboard' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="mobile-nav-btn {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i>
+        <span>DOSSIER</span>
     </a>
-    <a href="{% url 'offset_center' %}" class="mobile-nav-btn {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="bi bi-compass{% if 'offset' in request.resolver_match.url_name %}-fill{% endif %}"></i>
+    <a href="{% url 'project_list' %}" class="mobile-nav-btn {% if request.resolver_match.url_name == 'project_list' %}active{% endif %}">
+        <i class="bi bi-collection-fill"></i>
+        <span>PROJECTS</span>
+    </a>
+    <a href="{% url 'offset_center' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="mobile-nav-btn {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-compass-fill"></i>
         <span>OFFSETS</span>
     </a>
-    <a href="{% url 'class_list' %}" class="mobile-nav-btn {% if 'class' in request.resolver_match.url_name %}active{% endif %}">
+    <a href="{% url 'class_list' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="mobile-nav-btn {% if 'class' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-boxes"></i>
         <span>CLASSES</span>
     </a>
-    <button type="button" class="mobile-nav-btn border-0 bg-transparent" id="mobileSearchBtn">
-        <i class="bi bi-search"></i>
-        <span>SEARCH</span>
-    </button>
     <button type="button" class="mobile-nav-btn border-0 bg-transparent" data-bs-toggle="offcanvas" data-bs-target="#mobileToolsDrawer">
         <i class="bi bi-menu-button-wide"></i>
-        <span>TOOLS</span>
+        <span>ALL PAGES</span>
     </button>
 </nav>
 
 <!-- Mobile Offcanvas Tools Drawer -->
-<div class="offcanvas offcanvas-bottom offcanvas-mobile-drawer" tabindex="-1" id="mobileToolsDrawer" style="height: 75vh; border-top: 3px solid var(--cyber-pink); border-radius: 0;">
+<div class="offcanvas offcanvas-bottom offcanvas-mobile-drawer" tabindex="-1" id="mobileToolsDrawer" style="height: 80vh; border-top: 3px solid var(--cyber-pink); border-radius: 0;">
     <div class="offcanvas-header border-bottom border-dark py-3 px-4" style="background: #06070a;">
         <h5 class="offcanvas-title text-white fs-6 fw-bold font-anime">
-            <i class="bi bi-tools text-warning me-2"></i> // TACTICAL RESEARCH TOOLS
+            <i class="bi bi-tools text-warning me-2"></i> // TACTICAL NAVIGATION &amp; PAGES
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-3" style="background: #0a0d14;">
         <div class="row g-2">
             <div class="col-6">
-                <a href="{% url 'field_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                <a href="{% url 'dashboard' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-speedometer2 fs-3 text-info mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">OVERVIEW</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'project_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-collection-fill fs-3 text-warning mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">ALL PROJECTS</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'class_list' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-boxes fs-3 text-primary mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">CLASSES</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'field_list' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
                     <i class="bi bi-hash fs-3 text-info mb-1"></i>
                     <span class="text-white fw-bold font-anime small">FIELDS</span>
                 </a>
             </div>
             <div class="col-6">
-                <a href="{% url 'method_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                <a href="{% url 'method_list' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
                     <i class="bi bi-braces fs-3 text-warning mb-1"></i>
                     <span class="text-white fw-bold font-anime small">METHODS</span>
                 </a>
             </div>
             <div class="col-6">
-                <a href="{% url 'graph_view' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
-                    <i class="bi bi-diagram-3 fs-3 text-primary mb-1"></i>
-                    <span class="text-white fw-bold font-anime small">GRAPH</span>
+                <a href="{% url 'offset_center' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-compass-fill fs-3 text-warning mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">OFFSETS</span>
                 </a>
             </div>
             <div class="col-6">
-                <a href="{% url 'dump_viewer' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
-                    <i class="bi bi-file-earmark-code fs-3 text-success mb-1"></i>
-                    <span class="text-white fw-bold font-anime small">DUMP VIEWER</span>
+                <a href="{% url 'graph_view' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-diagram-3 fs-3 text-primary mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">GRAPH</span>
                 </a>
             </div>
             <div class="col-6">
@@ -173,21 +247,15 @@
                 </a>
             </div>
             <div class="col-6">
-                <a href="{% url 'reports_view' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                <a href="{% url 'reports_view' %}{% if active_project %}?project_id={{ active_project.id }}{% endif %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
                     <i class="bi bi-file-earmark-arrow-down fs-3 text-secondary mb-1"></i>
                     <span class="text-white fw-bold font-anime small">EXPORTS</span>
                 </a>
             </div>
             <div class="col-6">
-                <a href="{% url 'rule_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
-                    <i class="bi bi-sliders fs-3 text-info mb-1"></i>
-                    <span class="text-white fw-bold font-anime small">RULES</span>
-                </a>
-            </div>
-            <div class="col-6">
-                <a href="{% url 'project_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
-                    <i class="bi bi-folder fs-3 text-warning mb-1"></i>
-                    <span class="text-white fw-bold font-anime small">PROJECTS</span>
+                <a href="{% url 'dashboard' %}?new=1" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid var(--cyber-pink); box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-cloud-arrow-up-fill fs-3 mb-1" style="color: var(--cyber-pink);"></i>
+                    <span class="text-white fw-bold font-anime small">NEW APK</span>
                 </a>
             </div>
         </div>

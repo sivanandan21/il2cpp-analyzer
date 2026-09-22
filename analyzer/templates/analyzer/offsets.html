@@ -3,6 +3,40 @@
 {% block title %}Offset Center // アドレス照合台帳 &bull; IL2CPP Analyzer{% endblock %}
 
 {% block content %}
+<!-- Active Target Context & Quick Subpage Switcher -->
+{% if project %}
+<div class="glass-card mb-3 p-2 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: rgba(0, 240, 255, 0.03); border-left: 4px solid var(--cyber-yellow);">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="anime-tag" style="background: var(--cyber-yellow); color: #000; font-size: 0.7rem;">[ ACTIVE TARGET ]</span>
+        <strong class="text-white font-mono small">{{ project.name }}</strong>
+        <span class="badge-address badge-field-offset" style="font-size: 0.65rem; padding: 2px 6px;">{{ project.engine_type }} // {{ project.architecture }}</span>
+    </div>
+    <div class="d-flex gap-1 flex-wrap font-mono">
+        <a href="{% url 'dashboard' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-speedometer2"></i> Overview
+        </a>
+        <a href="{% url 'class_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-boxes"></i> Classes
+        </a>
+        <a href="{% url 'field_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-hash"></i> Fields
+        </a>
+        <a href="{% url 'method_list' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-braces"></i> Methods
+        </a>
+        <a href="{% url 'offset_center' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-warning text-warning py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-compass-fill"></i> Offsets
+        </a>
+        <a href="{% url 'graph_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-diagram-3"></i> Graph
+        </a>
+        <a href="{% url 'reports_view' %}?project_id={{ project.id }}" class="btn btn-sm btn-dark border border-secondary py-0 px-2" style="font-size: 0.72rem;">
+            <i class="bi bi-file-earmark-arrow-down"></i> Exports
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
     <div>
         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
@@ -13,7 +47,7 @@
         <p class="text-secondary small mb-0 font-mono">Verified memory displacements, relative virtual addresses, and file offsets.</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="{% url 'important_offsets' %}" class="btn-action-primary">
+        <a href="{% url 'important_offsets' %}{% if project %}?project_id={{ project.id }}{% endif %}" class="btn-action-primary">
             <i class="bi bi-star-fill text-dark"></i>
             <span>RANKED CANDIDATES // 重要番地</span>
         </a>
@@ -22,22 +56,22 @@
 
 <!-- Touch-Swipeable Address Type Pill Tabs Carousel -->
 <div class="pill-tabs-container mb-3">
-    <a href="{% url 'offset_center' %}{% if current_q %}?q={{ current_q }}{% endif %}" class="pill-tab-item {% if not current_tab %}active{% endif %}">
+    <a href="{% url 'offset_center' %}?project_id={{ project.id }}{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if not current_tab %}active{% endif %}">
         ALL DOMAINS // 全番地
     </a>
-    <a href="{% url 'offset_center' %}?tab=FIELD_OFFSET{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'FIELD_OFFSET' %}active{% endif %}">
+    <a href="{% url 'offset_center' %}?project_id={{ project.id }}&tab=FIELD_OFFSET{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'FIELD_OFFSET' %}active{% endif %}">
         <span class="badge-address badge-field-offset" style="padding: 1px 5px; font-size: 0.68rem;">FIELD</span> HEAP OFFSET
     </a>
-    <a href="{% url 'offset_center' %}?tab=METHOD_RVA{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'METHOD_RVA' %}active{% endif %}">
+    <a href="{% url 'offset_center' %}?project_id={{ project.id }}&tab=METHOD_RVA{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'METHOD_RVA' %}active{% endif %}">
         <span class="badge-address badge-method-rva" style="padding: 1px 5px; font-size: 0.68rem;">RVA</span> CODE POINTER
     </a>
-    <a href="{% url 'offset_center' %}?tab=STATIC_ADDRESS{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'STATIC_ADDRESS' %}active{% endif %}">
+    <a href="{% url 'offset_center' %}?project_id={{ project.id }}&tab=STATIC_ADDRESS{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'STATIC_ADDRESS' %}active{% endif %}">
         <span class="badge-address badge-static-addr" style="padding: 1px 5px; font-size: 0.68rem;">STATIC</span> GLOBAL ADDR
     </a>
-    <a href="{% url 'offset_center' %}?tab=VIRTUAL_ADDRESS{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'VIRTUAL_ADDRESS' %}active{% endif %}">
+    <a href="{% url 'offset_center' %}?project_id={{ project.id }}&tab=VIRTUAL_ADDRESS{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'VIRTUAL_ADDRESS' %}active{% endif %}">
         <span class="badge-address badge-va" style="padding: 1px 5px; font-size: 0.68rem;">VA</span> RUNTIME ADDR
     </a>
-    <a href="{% url 'offset_center' %}?tab=FILE_OFFSET{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'FILE_OFFSET' %}active{% endif %}">
+    <a href="{% url 'offset_center' %}?project_id={{ project.id }}&tab=FILE_OFFSET{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'FILE_OFFSET' %}active{% endif %}">
         <span class="badge-address badge-file-offset" style="padding: 1px 5px; font-size: 0.68rem;">FILE</span> BINARY DISK
     </a>
 </div>
@@ -45,6 +79,9 @@
 <!-- Search & Filters Bar -->
 <div class="glass-card mb-4 p-3">
     <form method="get" class="row g-2 align-items-center">
+        {% if project %}
+        <input type="hidden" name="project_id" value="{{ project.id }}">
+        {% endif %}
         <div class="col-12 col-md-5">
             <div class="input-group">
                 <span class="input-group-text bg-black border-2 border-dark text-warning"><i class="bi bi-search"></i></span>
@@ -226,13 +263,13 @@
     <nav>
         <ul class="pagination pagination-sm gap-1">
             {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page=1{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">&laquo; First</a></li>
-                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.previous_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Prev</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page=1{% if project %}&project_id={{ project.id }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">&laquo; First</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.previous_page_number }}{% if project %}&project_id={{ project.id }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Prev</a></li>
             {% endif %}
             <li class="page-item disabled"><span class="page-link bg-black text-warning border-2 border-dark px-3 py-2 font-mono fw-bold">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
             {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.next_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Next</a></li>
-                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.paginator.num_pages }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Last &raquo;</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.next_page_number }}{% if project %}&project_id={{ project.id }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Next</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.paginator.num_pages }}{% if project %}&project_id={{ project.id }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Last &raquo;</a></li>
             {% endif %}
         </ul>
     </nav>
