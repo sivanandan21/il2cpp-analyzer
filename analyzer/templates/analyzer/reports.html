@@ -353,6 +353,39 @@ async function saveArtifactFile(projectId, filename, event) {
     try {
         const resp = await fetch(`/reports/${projectId}/${filename}?view=1`);
         const text = await resp.text();
+
+        // 1. Prioritize Native Windows Save Dialog (File System Access API)
+        if ('showSaveFilePicker' in window) {
+            try {
+                const ext = filename.split('.').pop().toLowerCase();
+                const acceptObj = {};
+                if (ext === 'txt') acceptObj['text/plain'] = ['.txt'];
+                else if (ext === 'cs') acceptObj['text/plain'] = ['.cs'];
+                else if (ext === 'csv') acceptObj['text/csv'] = ['.csv'];
+                else if (ext === 'json') acceptObj['application/json'] = ['.json'];
+                else acceptObj['text/plain'] = ['.' + ext];
+
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{
+                        description: `${ext.toUpperCase()} Document (*.${ext})`,
+                        accept: acceptObj
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(text);
+                await writable.close();
+                if (typeof showToast === 'function') {
+                    showToast(`Saved ${filename} to your computer!`);
+                }
+                return;
+            } catch (pickerErr) {
+                // If user deliberately canceled dialog, return
+                if (pickerErr.name === 'AbortError') return;
+            }
+        }
+
+        // 2. Fallback to client-side Blob download
         const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
