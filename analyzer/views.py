@@ -29,19 +29,16 @@ from .services.semantic_analyzer import GAMEPLAY_CATEGORIES
 
 
 def get_active_project(request):
-    """Helper to retrieve selected project or fallback to latest."""
+    """Helper to retrieve explicitly selected project. Does not auto-fallback to sample data."""
     project_id = request.GET.get('project_id') or request.session.get('active_project_id')
     if project_id:
         try:
-            p = Project.objects.get(id=project_id)
+            p = Project.objects.exclude(name__icontains='synthetic').get(id=project_id)
             request.session['active_project_id'] = p.id
             return p
         except Project.DoesNotExist:
-            pass
-    latest = Project.objects.order_by('-created_at').first()
-    if latest:
-        request.session['active_project_id'] = latest.id
-    return latest
+            request.session.pop('active_project_id', None)
+    return None
 
 
 # =============================================================================

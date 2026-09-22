@@ -43,7 +43,7 @@
         <!-- Desktop Tactical Nav -->
         <nav class="desktop-nav">
             <a href="{% url 'dashboard' %}" class="nav-item-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="bi bi-grid-1x2-fill"></i> OVERVIEW
+                <i class="bi bi-cloud-arrow-up-fill" style="color: var(--cyber-pink);"></i> APK UPLOAD
             </a>
             <a href="{% url 'offset_center' %}" class="nav-item-link {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
                 <i class="bi bi-compass-fill" style="color: var(--cyber-yellow);"></i> OFFSETS
@@ -111,8 +111,8 @@
 <!-- Tactical Anime Mobile Bottom App Bar -->
 <nav class="mobile-bottom-bar">
     <a href="{% url 'dashboard' %}" class="mobile-nav-btn {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-        <i class="bi bi-grid-1x2{% if request.resolver_match.url_name == 'dashboard' %}-fill{% endif %}"></i>
-        <span>OVERVIEW</span>
+        <i class="bi bi-cloud-arrow-up{% if request.resolver_match.url_name == 'dashboard' %}-fill{% endif %}"></i>
+        <span>UPLOAD</span>
     </a>
     <a href="{% url 'offset_center' %}" class="mobile-nav-btn {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-compass{% if 'offset' in request.resolver_match.url_name %}-fill{% endif %}"></i>
