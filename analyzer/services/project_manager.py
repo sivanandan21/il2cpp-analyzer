@@ -21,6 +21,7 @@ import shutil
 import zipfile
 from django.utils import timezone
 
+from .apk_inspector import ApkInspector, ApkInspectionReport
 from .detector import FormatDetector, DetectionResult
 from .metadata_parser import MetadataParser, ParsedMetadataResult
 from .binary_parser import BinaryParser, BinaryAnalysisResult
@@ -54,33 +55,59 @@ class ProjectManager:
 
         try:
             # Step 1: Upload complete & directory setup
-            update_step(1, "Upload complete. Preparing isolated workspace.", "DETECTING")
+            update_step(1, "Upload complete. Decompiling and inspecting APK archive.", "DETECTING")
             work_dir = Path(project.get_storage_path())
             work_dir.mkdir(parents=True, exist_ok=True)
 
             # Check if file is ZIP/APK and unpack safely
             is_archive = zipfile.is_zipfile(file_path)
-            unpacked_files = []
             target_metadata_path = None
             target_binary_path = None
 
             if is_archive:
                 extract_dir = work_dir / "unpacked"
                 extract_dir.mkdir(parents=True, exist_ok=True)
-                cls._safe_extract_zip(file_path, extract_dir)
 
-                # Search extracted directory for candidate files
-                for root, _, files in os.walk(extract_dir):
-                    for fname in files:
-                        f_full = Path(root) / fname
-                        f_lower = fname.lower()
-                        if f_lower == "global-metadata.dat" or f_lower.endswith(".dat"):
-                            target_metadata_path = f_full
-                        elif f_lower == "dump.cs" or f_lower.endswith(".cs"):
+                # Use ApkInspector for automated APK decompilation and asset extraction
+                apk_report = ApkInspector.inspect_and_extract(file_path, extract_dir)
+                if apk_report.is_valid_apk or file_path.name.lower().endswith(".apk"):
+                    project.is_apk = True
+                    project.source_type = "APK"
+                    if apk_report.package_name:
+                        project.package_name = apk_report.package_name
+                        if not project.name or project.name.startswith("Uploaded_") or project.name in ("Game_Analysis", "MyGame"):
+                            project.name = apk_report.app_label or apk_report.package_name
+                    if apk_report.version_name:
+                        project.app_version = apk_report.version_name
+                    if apk_report.engine_type != "UNKNOWN":
+                        project.engine_type = apk_report.engine_type
+                    if apk_report.platform:
+                        project.platform = apk_report.platform
+                    if apk_report.architecture != "UNKNOWN":
+                        project.architecture = apk_report.architecture
+                    if apk_report.unity_version != "UNKNOWN":
+                        project.unity_version = apk_report.unity_version
+
+                    target_metadata_path = apk_report.metadata_path
+                    target_binary_path = apk_report.binary_path
+
+                    for w in apk_report.warnings:
+                        WarningRecord.objects.create(project=project, category="APK_INSPECTION", message=w, severity="INFO")
+
+                # Fallback directory search if ApkInspector didn't locate both targets
+                if not target_metadata_path or not target_binary_path:
+                    for root, _, files in os.walk(extract_dir):
+                        for fname in files:
+                            f_full = Path(root) / fname
+                            f_lower = fname.lower()
                             if not target_metadata_path:
-                                target_metadata_path = f_full
-                        elif f_lower == "libil2cpp.so" or f_lower == "gameassembly.dll":
-                            target_binary_path = f_full
+                                if f_lower == "global-metadata.dat" or f_lower.endswith(".dat"):
+                                    target_metadata_path = f_full
+                                elif f_lower == "dump.cs" or f_lower.endswith(".cs"):
+                                    target_metadata_path = f_full
+                            if not target_binary_path:
+                                if f_lower == "libil2cpp.so" or f_lower == "gameassembly.dll":
+                                    target_binary_path = f_full
             else:
                 # Single file uploaded
                 if file_path.name.lower().endswith((".dat", ".cs", ".json", ".csv")):
@@ -89,15 +116,19 @@ class ProjectManager:
                     target_binary_path = file_path
 
             # Step 2 & 3: Detecting format & architecture
-            update_step(2, "Detecting binary format and signatures.", "DETECTING")
+            update_step(2, "Detecting binary format, engine signatures, and architecture.", "DETECTING")
             det_res = FormatDetector.detect_file(file_path)
-            project.platform = det_res.platform
-            project.architecture = det_res.architecture
-            project.binary_name = det_res.binary_name
-            project.source_type = det_res.metadata_type
-            if det_res.metadata_version:
+            if not project.platform or project.platform == "UNKNOWN":
+                project.platform = det_res.platform
+            if not project.architecture or project.architecture == "UNKNOWN":
+                project.architecture = det_res.architecture
+            if not project.binary_name or project.binary_name == "libil2cpp.so":
+                project.binary_name = det_res.binary_name
+            if not project.source_type or project.source_type == "UNKNOWN":
+                project.source_type = det_res.metadata_type
+            if det_res.metadata_version and not project.metadata_version:
                 project.metadata_version = str(det_res.metadata_version)
-            if det_res.unity_version != "UNKNOWN":
+            if det_res.unity_version != "UNKNOWN" and (not project.unity_version or project.unity_version == "UNKNOWN"):
                 project.unity_version = det_res.unity_version
             project.save()
 

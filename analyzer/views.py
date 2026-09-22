@@ -49,23 +49,51 @@ def get_active_project(request):
 # =============================================================================
 
 def dashboard(request):
+    if request.method == 'POST' and 'file' in request.FILES:
+        form = ProjectUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            project = form.save(commit=False)
+            project.status = "UPLOADED"
+            project.save()
+
+            uploaded_file = request.FILES['file']
+            save_dir = Path(project.get_storage_path())
+            save_dir.mkdir(parents=True, exist_ok=True)
+            saved_file_path = save_dir / uploaded_file.name
+
+            with open(saved_file_path, 'wb+') as dest:
+                for chunk in uploaded_file.chunks():
+                    dest.write(chunk)
+
+            ProjectManager.process_project(project.id, saved_file_path)
+            request.session['active_project_id'] = project.id
+            return redirect('dashboard')
+
     active_proj = get_active_project(request)
     all_projects = Project.objects.all()[:10]
 
     # Overall or active project statistics
     stats = {
         "projects_count": Project.objects.count(),
-        "classes_count": ClassDefinition.objects.count(),
-        "methods_count": MethodDefinition.objects.count(),
-        "fields_count": FieldDefinition.objects.count(),
-        "field_offsets_count": AddressRecord.objects.filter(address_type="FIELD_OFFSET").count(),
-        "method_rvas_count": AddressRecord.objects.filter(address_type="METHOD_RVA").count(),
-        "static_addresses_count": AddressRecord.objects.filter(address_type="STATIC_ADDRESS").count(),
-        "virtual_addresses_count": AddressRecord.objects.filter(address_type="VIRTUAL_ADDRESS").count(),
-        "file_offsets_count": AddressRecord.objects.filter(address_type="FILE_OFFSET").count(),
+        "classes_count": ClassDefinition.objects.filter(project=active_proj).count() if active_proj else 0,
+        "methods_count": MethodDefinition.objects.filter(class_def__project=active_proj).count() if active_proj else 0,
+        "fields_count": FieldDefinition.objects.filter(class_def__project=active_proj).count() if active_proj else 0,
+        "field_offsets_count": AddressRecord.objects.filter(project=active_proj, address_type="FIELD_OFFSET").count() if active_proj else 0,
+        "method_rvas_count": AddressRecord.objects.filter(project=active_proj, address_type="METHOD_RVA").count() if active_proj else 0,
+        "static_addresses_count": AddressRecord.objects.filter(project=active_proj, address_type="STATIC_ADDRESS").count() if active_proj else 0,
+        "virtual_addresses_count": AddressRecord.objects.filter(project=active_proj, address_type="VIRTUAL_ADDRESS").count() if active_proj else 0,
+        "file_offsets_count": AddressRecord.objects.filter(project=active_proj, address_type="FILE_OFFSET").count() if active_proj else 0,
     }
 
     category_stats = []
+    gameplay_dossier = {
+        "currencies": [],
+        "stats": [],
+        "combat": [],
+        "speed": [],
+        "security": []
+    }
+
     if active_proj:
         cat_counts = (
             ClassDefinition.objects.filter(project=active_proj)
@@ -79,11 +107,41 @@ def dashboard(request):
                 "count": c['count']
             })
 
+        # Query top game data for user convenience
+        gameplay_dossier["currencies"] = list(FieldDefinition.objects.filter(
+            class_def__project=active_proj,
+            primary_category__in=['CURRENCY', 'ECONOMY', 'REWARDS']
+        ).select_related('class_def').order_by('-importance_score')[:8])
+
+        gameplay_dossier["stats"] = list(FieldDefinition.objects.filter(
+            class_def__project=active_proj,
+            primary_category__in=['HEALTH', 'PLAYER', 'ENERGY', 'STAMINA', 'EXPERIENCE']
+        ).select_related('class_def').order_by('-importance_score')[:8])
+
+        gameplay_dossier["combat"] = list(FieldDefinition.objects.filter(
+            class_def__project=active_proj,
+            primary_category__in=['DAMAGE', 'COMBAT', 'WEAPON', 'AMMO', 'COOLDOWN']
+        ).select_related('class_def').order_by('-importance_score')[:8])
+
+        gameplay_dossier["speed"] = list(FieldDefinition.objects.filter(
+            class_def__project=active_proj,
+            primary_category__in=['SPEED', 'PHYSICS']
+        ).select_related('class_def').order_by('-importance_score')[:6])
+
+        gameplay_dossier["security"] = list(MethodDefinition.objects.filter(
+            class_def__project=active_proj,
+            primary_category__in=['SECURITY', 'NETWORK', 'ENCRYPTION']
+        ).select_related('class_def').order_by('-importance_score')[:6])
+
+    upload_form = ProjectUploadForm()
+
     return render(request, 'analyzer/dashboard.html', {
         'active_project': active_proj,
         'projects': all_projects,
         'stats': stats,
         'category_stats': category_stats,
+        'gameplay_dossier': gameplay_dossier,
+        'upload_form': upload_form,
     })
 
 

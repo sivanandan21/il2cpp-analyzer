@@ -50,6 +50,11 @@ class Project(models.Model):
     name = models.CharField(max_length=255, db_index=True)
     description = models.TextField(blank=True, default="")
     source_type = models.CharField(max_length=50, default="UNKNOWN")  # BINARY_DAT, DUMP_CS, JSON, APK, ZIP
+    package_name = models.CharField(max_length=255, blank=True, default="", db_index=True)
+    app_version = models.CharField(max_length=100, blank=True, default="")
+    engine_type = models.CharField(max_length=100, default="Unity (IL2CPP)")
+    target_sdk = models.CharField(max_length=50, blank=True, default="")
+    is_apk = models.BooleanField(default=False)
     platform = models.CharField(max_length=50, default="UNKNOWN", db_index=True)  # Android, Windows, Linux
     architecture = models.CharField(max_length=50, default="UNKNOWN", db_index=True)  # ARM64, ARMv7, x86, x64
     unity_version = models.CharField(max_length=100, default="UNKNOWN")

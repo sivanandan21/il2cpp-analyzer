@@ -1,29 +1,183 @@
 {% extends 'analyzer/base.html' %}
 {% load static %}
 
-{% block title %}Dashboard // 統括司令室 &bull; IL2CPP Analyzer{% endblock %}
+{% block title %}
+  {% if active_project %}{{ active_project.name }} // ゲーム解析{% else %}Direct APK Ingestion // 全自動 APK 解析{% endif %} &bull; IL2CPP Analyzer
+{% endblock %}
 
 {% block content %}
-<!-- Top Cockpit Header -->
+
+{% if not active_project %}
+<!-- ========================================================================= -->
+<!-- HERO DIRECT APK UPLOAD PORTAL (When No Target is Active)                 -->
+<!-- ========================================================================= -->
+<div class="glass-card mb-4" style="border: 3px solid var(--cyber-pink); box-shadow: 8px 8px 0px #000;">
+    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+        <span class="anime-tag" style="background: var(--cyber-pink); color: #000;">[ 待機 STANDBY: DIRECT APK MODE ]</span>
+        <span class="badge-address badge-field-offset font-mono">AUTOMATED DECOMPILATION &amp; EXTRACTION</span>
+    </div>
+    <h1 class="h2 fw-bold text-white font-anime mb-2">
+        UPLOAD GAME APK // 全自動 APK 解析ポータル
+    </h1>
+    <p class="text-secondary font-mono mb-4" style="font-size: 0.95rem;">
+        Drop any Android Game APK (<span class="text-warning">.apk</span>) or archive. The analyzer automatically unpacks the archive, inspects <span class="text-info">AndroidManifest.xml</span>, identifies the game engine &amp; Unity version, extracts <span class="text-pink text-warning">global-metadata.dat</span> + <span class="text-cyan text-info">libil2cpp.so</span>, and maps all game data &amp; verified memory offsets.
+    </p>
+
+    <!-- Direct Upload Form -->
+    <form method="post" action="{% url 'dashboard' %}" enctype="multipart/form-data" id="directApkForm">
+        {% csrf_token %}
+        
+        <div class="upload-dropzone mb-4 p-5 text-center" id="apkDropzone" style="border: 3px dashed var(--cyber-cyan); background: rgba(0, 240, 255, 0.03); cursor: pointer; transition: all 0.2s;">
+            <i class="bi bi-file-earmark-zip-fill text-info" style="font-size: 3.5rem;"></i>
+            <h3 class="h4 fw-bold text-white font-anime mt-3 mb-1">
+                DRAG &amp; DROP ANDROID GAME APK HERE
+            </h3>
+            <p class="text-secondary font-mono small mb-3">
+                Supports complete <strong class="text-white">.apk</strong> packages, <strong class="text-white">.zip</strong> archives, or raw <strong class="text-white">global-metadata.dat</strong> / <strong class="text-white">libil2cpp.so</strong> (Up to 512 MB)
+            </p>
+            
+            <input type="file" name="file" id="directApkInput" accept=".apk,.zip,.dat,.so,.dll,.cs,.json,.csv" style="display: none;" required>
+            
+            <button type="button" class="btn-action-primary px-4 py-2" onclick="document.getElementById('directApkInput').click();">
+                <i class="bi bi-folder2-open"></i>
+                <span>SELECT APK FROM DISK // ファイル選択</span>
+            </button>
+            <div id="selectedApkDisplay" class="mt-3 font-mono text-warning fw-bold small" style="display: none;"></div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6">
+                <label class="form-label font-mono text-secondary small">OPTIONAL: CUSTOM GAME LABEL // ゲーム表示名</label>
+                <input type="text" name="name" class="form-control font-mono" placeholder="Auto-detected from APK if blank (e.g. Dynamons World)" style="background: var(--cyber-panel); color: #fff; border: 2px solid #000; box-shadow: 3px 3px 0px #000;">
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label font-mono text-secondary small">OPTIONAL: NOTES // メモ</label>
+                <input type="text" name="description" class="form-control font-mono" placeholder="Version notes, research objective, etc." style="background: var(--cyber-panel); color: #fff; border: 2px solid #000; box-shadow: 3px 3px 0px #000;">
+            </div>
+        </div>
+
+        <button type="submit" class="btn-action-primary w-100 py-3 fs-5" id="directSubmitBtn">
+            <i class="bi bi-lightning-charge-fill"></i>
+            <span>DECOMPILE &amp; ANALYZE APK // 全自動解析実行</span>
+        </button>
+    </form>
+</div>
+
+<!-- What Gets Extracted Matrix -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="glass-card h-100 p-3" style="border-left: 4px solid var(--cyber-yellow);">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-android2 text-warning fs-5"></i>
+                <span class="font-anime text-white fw-bold">1. ANDROID MANIFEST</span>
+            </div>
+            <p class="small text-secondary font-mono mb-0">
+                Extracts Package Name (<code class="text-warning">com.company.game</code>), App Version, SDK Target, and Main Activities.
+            </p>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="glass-card h-100 p-3" style="border-left: 4px solid var(--cyber-cyan);">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-unity text-info fs-5"></i>
+                <span class="font-anime text-white fw-bold">2. ENGINE SIGNATURE</span>
+            </div>
+            <p class="small text-secondary font-mono mb-0">
+                Detects Unity version (<code class="text-info">2021.3.x</code>), architecture (<code class="text-info">ARM64</code>), and IL2CPP vs Mono runtime.
+            </p>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="glass-card h-100 p-3" style="border-left: 4px solid var(--cyber-pink);">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-cpu-fill text-pink fs-5" style="color: var(--cyber-pink);"></i>
+                <span class="font-anime text-white fw-bold">3. GAME DATA &amp; OFFSETS</span>
+            </div>
+            <p class="small text-secondary font-mono mb-0">
+                Discovers Field Offsets (<code style="color: var(--cyber-pink);">+0x...</code>), Method RVAs, and maps Currencies, Health, Damage, and Speed.
+            </p>
+        </div>
+    </div>
+</div>
+
+{% if projects %}
+<!-- List of previously analyzed games if any exist -->
+<div class="glass-card">
+    <div class="card-title">
+        <i class="bi bi-clock-history text-info"></i>
+        <span>RECENTLY ANALYZED GAMES // 解析済み履歴</span>
+    </div>
+    <div class="table-responsive mt-3">
+        <table class="table-brutalist">
+            <thead>
+                <tr>
+                    <th>GAME / TARGET NAME</th>
+                    <th>PACKAGE NAME</th>
+                    <th>ENGINE / ARCH</th>
+                    <th>CLASSES</th>
+                    <th>OFFSETS</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in projects %}
+                <tr>
+                    <td>
+                        <a href="{% url 'dashboard' %}?project_id={{ p.id }}" class="text-white fw-bold text-decoration-none font-anime">
+                            {{ p.name }}
+                        </a>
+                    </td>
+                    <td class="font-mono text-warning small">{{ p.package_name|default:"--" }}</td>
+                    <td class="font-mono text-info small">{{ p.engine_type }} / {{ p.architecture }}</td>
+                    <td class="font-mono">{{ p.classes_count }}</td>
+                    <td class="font-mono text-pink" style="color: var(--cyber-pink);">{{ p.fields_count }}</td>
+                    <td><span class="badge-address badge-method-rva">{{ p.status }}</span></td>
+                    <td>
+                        <a href="{% url 'dashboard' %}?project_id={{ p.id }}" class="btn-action-primary py-1 px-2 font-mono small text-decoration-none">
+                            LOAD DOSSIER
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- ========================================================================= -->
+<!-- ACTIVE TARGET COCKPIT: VITAL GAME DATA DOSSIER + LEDGER                  -->
+<!-- ========================================================================= -->
+
+<!-- Cockpit Header -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
     <div>
         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-            <span class="anime-tag">[ 状態 STATUS: 正常 NOMINAL ]</span>
-            <h1 class="h3 fw-bold text-white mb-0 font-anime">TACTICAL DASHBOARD // 統括指令室</h1>
-            {% if active_project %}
-                <span class="badge-address badge-field-offset" style="font-size: 0.72rem;">
-                    {{ active_project.platform }} / {{ active_project.architecture }}
-                </span>
+            <span class="anime-tag">[ 状態 STATUS: {{ active_project.status }} ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">{{ active_project.name|upper }}</h1>
+            <span class="badge-address badge-field-offset" style="font-size: 0.72rem;">
+                {{ active_project.platform }} / {{ active_project.architecture }}
+            </span>
+            {% if active_project.unity_version != "UNKNOWN" %}
+            <span class="badge-address badge-method-rva" style="font-size: 0.72rem;">
+                UNITY {{ active_project.unity_version }}
+            </span>
             {% endif %}
         </div>
         <p class="text-secondary small mb-0 font-mono">
-            Target: <strong class="text-white">{% if active_project %}{{ active_project.name }}{% else %}NO ACTIVE TARGET{% endif %}</strong> &bull; Non-fabricating IL2CPP metadata & native code analyzer.
+            {% if active_project.package_name %}
+                Package: <strong class="text-warning">{{ active_project.package_name }}</strong> &bull;
+            {% endif %}
+            Engine: <span class="text-info">{{ active_project.engine_type }}</span> &bull;
+            Indexed: <strong class="text-white">{{ stats.classes_count }}</strong> classes, <strong class="text-white">{{ stats.field_offsets_count }}</strong> verified offsets.
         </p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
         <a href="{% url 'upload' %}" class="btn-action-primary">
             <i class="bi bi-cloud-arrow-up-fill"></i>
-            <span>NEW INGESTION // 新規解析</span>
+            <span>ANALYZE NEW APK // 別APK解析</span>
         </a>
         <a href="{% url 'reports_view' %}" class="btn-action-secondary">
             <i class="bi bi-file-earmark-arrow-down-fill"></i>
@@ -32,10 +186,266 @@
     </div>
 </div>
 
-<!-- Warning Hazard Stripe -->
 <div class="hazard-stripe mb-4"></div>
 
-<!-- Cockpit 4-Metric Grid (Chunky Brutalist Telemetry Units) -->
+<!-- ========================================================================= -->
+<!-- 🔥 GAMEPLAY DATA QUICK DOSSIER ("EASY FOR USER")                           -->
+<!-- ========================================================================= -->
+<div class="glass-card mb-4" style="border: 2px solid var(--cyber-yellow); box-shadow: 6px 6px 0px #000;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div class="card-title mb-0">
+            <i class="bi bi-gem text-warning"></i>
+            <span>VITAL GAMEPLAY DATA DOSSIER // 重要ゲームデータ台帳</span>
+        </div>
+        <span class="badge-address badge-field-offset font-mono">ONE-CLICK COPY VERIFIED OFFSETS</span>
+    </div>
+    <p class="text-secondary small font-mono mb-3">
+        Automatically discovered state variables, currency stores, player statistics, combat coefficients, and security methods extracted from this APK.
+    </p>
+
+    <!-- Nav Tabs for Gameplay Categories -->
+    <ul class="nav nav-tabs border-0 mb-3 gap-2" id="gameDataTabs" role="tablist">
+        <li class="nav-item">
+            <button class="btn-action-secondary py-1 px-3 active font-mono small" id="currency-tab" data-bs-toggle="tab" data-bs-target="#tab-currency" type="button">
+                🪙 CURRENCY &amp; WALLET ({{ gameplay_dossier.currencies|length }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="btn-action-secondary py-1 px-3 font-mono small" id="stats-tab" data-bs-toggle="tab" data-bs-target="#tab-stats" type="button">
+                ❤️ PLAYER STATS ({{ gameplay_dossier.stats|length }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="btn-action-secondary py-1 px-3 font-mono small" id="combat-tab" data-bs-toggle="tab" data-bs-target="#tab-combat" type="button">
+                ⚔️ COMBAT &amp; WEAPONS ({{ gameplay_dossier.combat|length }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="btn-action-secondary py-1 px-3 font-mono small" id="speed-tab" data-bs-toggle="tab" data-bs-target="#tab-speed" type="button">
+                ⚡ SPEED &amp; PHYSICS ({{ gameplay_dossier.speed|length }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="btn-action-secondary py-1 px-3 font-mono small" id="security-tab" data-bs-toggle="tab" data-bs-target="#tab-security" type="button">
+                🛡️ ANTI-CHEAT &amp; INTEGRITY ({{ gameplay_dossier.security|length }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="gameDataTabContent">
+        <!-- CURRENCY TAB -->
+        <div class="tab-pane fade show active" id="tab-currency" role="tabpanel">
+            {% if gameplay_dossier.currencies %}
+            <div class="table-responsive">
+                <table class="table-brutalist">
+                    <thead>
+                        <tr>
+                            <th>FIELD NAME // 変数</th>
+                            <th>CLASS // 親構造体</th>
+                            <th>DATA TYPE</th>
+                            <th>FIELD OFFSET</th>
+                            <th>RELEVANCE</th>
+                            <th>ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in gameplay_dossier.currencies %}
+                        <tr>
+                            <td><strong class="text-warning font-mono">{{ f.name }}</strong></td>
+                            <td class="font-mono text-white small">{{ f.class_def.name }}</td>
+                            <td><span class="badge-address badge-method-rva">{{ f.type_name }}</span></td>
+                            <td>
+                                <span class="badge-address badge-field-offset font-mono fw-bold fs-6">
+                                    {{ f.offset_hex|default:"+0x??" }}
+                                </span>
+                            </td>
+                            <td><span class="anime-tag">{{ f.importance_score }}/100</span></td>
+                            <td>
+                                <button class="btn-action-primary py-0 px-2 font-mono small" onclick="navigator.clipboard.writeText('{{ f.offset_hex }}'); this.innerText='COPIED!';">
+                                    COPY OFFSET
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-secondary font-mono">
+                No explicit currency fields found in top scoring rules. Use the <a href="{% url 'search_view' %}" class="text-info">Search Engine</a> to query all fields.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- STATS TAB -->
+        <div class="tab-pane fade" id="tab-stats" role="tabpanel">
+            {% if gameplay_dossier.stats %}
+            <div class="table-responsive">
+                <table class="table-brutalist">
+                    <thead>
+                        <tr>
+                            <th>STAT FIELD // 変数</th>
+                            <th>CLASS // 親構造体</th>
+                            <th>DATA TYPE</th>
+                            <th>FIELD OFFSET</th>
+                            <th>CONFIDENCE</th>
+                            <th>ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in gameplay_dossier.stats %}
+                        <tr>
+                            <td><strong class="text-white font-mono">{{ f.name }}</strong></td>
+                            <td class="font-mono text-white small">{{ f.class_def.name }}</td>
+                            <td><span class="badge-address badge-method-rva">{{ f.type_name }}</span></td>
+                            <td>
+                                <span class="badge-address badge-field-offset font-mono fw-bold fs-6">
+                                    {{ f.offset_hex|default:"+0x??" }}
+                                </span>
+                            </td>
+                            <td><span class="anime-tag">{{ f.confidence }}</span></td>
+                            <td>
+                                <button class="btn-action-primary py-0 px-2 font-mono small" onclick="navigator.clipboard.writeText('{{ f.offset_hex }}'); this.innerText='COPIED!';">
+                                    COPY OFFSET
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-secondary font-mono">No direct stat fields indexed.</div>
+            {% endif %}
+        </div>
+
+        <!-- COMBAT TAB -->
+        <div class="tab-pane fade" id="tab-combat" role="tabpanel">
+            {% if gameplay_dossier.combat %}
+            <div class="table-responsive">
+                <table class="table-brutalist">
+                    <thead>
+                        <tr>
+                            <th>COMBAT FIELD</th>
+                            <th>CLASS NAME</th>
+                            <th>DATA TYPE</th>
+                            <th>FIELD OFFSET</th>
+                            <th>RELEVANCE</th>
+                            <th>ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in gameplay_dossier.combat %}
+                        <tr>
+                            <td><strong class="text-pink font-mono" style="color: var(--cyber-pink);">{{ f.name }}</strong></td>
+                            <td class="font-mono text-white small">{{ f.class_def.name }}</td>
+                            <td><span class="badge-address badge-method-rva">{{ f.type_name }}</span></td>
+                            <td>
+                                <span class="badge-address badge-field-offset font-mono fw-bold fs-6">
+                                    {{ f.offset_hex|default:"+0x??" }}
+                                </span>
+                            </td>
+                            <td><span class="anime-tag">{{ f.importance_score }}/100</span></td>
+                            <td>
+                                <button class="btn-action-primary py-0 px-2 font-mono small" onclick="navigator.clipboard.writeText('{{ f.offset_hex }}'); this.innerText='COPIED!';">
+                                    COPY OFFSET
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-secondary font-mono">No combat parameters indexed.</div>
+            {% endif %}
+        </div>
+
+        <!-- SPEED TAB -->
+        <div class="tab-pane fade" id="tab-speed" role="tabpanel">
+            {% if gameplay_dossier.speed %}
+            <div class="table-responsive">
+                <table class="table-brutalist">
+                    <thead>
+                        <tr>
+                            <th>PHYSICS / SPEED FIELD</th>
+                            <th>CLASS NAME</th>
+                            <th>DATA TYPE</th>
+                            <th>FIELD OFFSET</th>
+                            <th>ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in gameplay_dossier.speed %}
+                        <tr>
+                            <td><strong class="text-info font-mono">{{ f.name }}</strong></td>
+                            <td class="font-mono text-white small">{{ f.class_def.name }}</td>
+                            <td><span class="badge-address badge-method-rva">{{ f.type_name }}</span></td>
+                            <td>
+                                <span class="badge-address badge-field-offset font-mono fw-bold fs-6">
+                                    {{ f.offset_hex|default:"+0x??" }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn-action-primary py-0 px-2 font-mono small" onclick="navigator.clipboard.writeText('{{ f.offset_hex }}'); this.innerText='COPIED!';">
+                                    COPY OFFSET
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-secondary font-mono">No physics variables found.</div>
+            {% endif %}
+        </div>
+
+        <!-- SECURITY TAB -->
+        <div class="tab-pane fade" id="tab-security" role="tabpanel">
+            {% if gameplay_dossier.security %}
+            <div class="table-responsive">
+                <table class="table-brutalist">
+                    <thead>
+                        <tr>
+                            <th>SECURITY / CHECK METHOD</th>
+                            <th>CLASS NAME</th>
+                            <th>SIGNATURE</th>
+                            <th>METHOD RVA</th>
+                            <th>ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in gameplay_dossier.security %}
+                        <tr>
+                            <td><strong class="text-warning font-mono">{{ m.name }}</strong></td>
+                            <td class="font-mono text-white small">{{ m.class_def.name }}</td>
+                            <td class="font-mono small text-secondary">{{ m.signature|truncatechars:40 }}</td>
+                            <td>
+                                <span class="badge-address badge-method-rva font-mono fw-bold fs-6">
+                                    {{ m.rva_hex|default:"UNRESOLVED" }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if m.rva_hex %}
+                                <button class="btn-action-primary py-0 px-2 font-mono small" onclick="navigator.clipboard.writeText('{{ m.rva_hex }}'); this.innerText='COPIED!';">
+                                    COPY RVA
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-secondary font-mono">No explicit security functions indexed.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Telemetry Metrics Grid -->
 <div class="metrics-grid mb-4">
     <div class="metric-card yellow-accent">
         <div class="metric-top-label">
@@ -66,23 +476,23 @@
 
     <div class="metric-card yellow-accent">
         <div class="metric-top-label">
-            <span>FIELD OFFSETS // 照合</span>
+            <span>VERIFIED OFFSETS // 照合番地</span>
             <i class="bi bi-compass-fill" style="color: var(--cyber-yellow);"></i>
         </div>
         <div class="metric-value text-warning">{{ stats.field_offsets_count|default:"0" }}</div>
-        <div class="metric-sub font-mono">[ VERIFIED DISPLACEMENTS ]</div>
+        <div class="metric-sub font-mono">[ MEMORY DISPLACEMENTS ]</div>
     </div>
 </div>
 
+<!-- Address Separation Ledger and Quick Links -->
 <div class="row g-4 mb-4">
-    <!-- Strict Address System Ledger -->
     <div class="col-12 col-lg-6">
         <div class="glass-card h-100">
             <div class="card-title">
                 <i class="bi bi-shield-check text-warning"></i>
-                <span>ADDRESS SEPARATION LEDGER // 番地分離台帳</span>
+                <span>ADDRESS SEPARATION LEDGER // 番地照合台帳</span>
             </div>
-            <div class="card-subtitle">Five strictly isolated address representations. No cross-contamination.</div>
+            <div class="card-subtitle">Verified memory representations. No cross-contamination.</div>
 
             <div class="d-flex flex-column gap-2 mt-3">
                 <a href="{% url 'offset_center' %}?tab=FIELD_OFFSET" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
@@ -103,218 +513,74 @@
 
                 <a href="{% url 'offset_center' %}?tab=STATIC_ADDRESS" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge-address badge-static-addr">STATIC_ADDRESS</span>
-                        <span class="small text-secondary d-none d-sm-inline font-mono">Global class storage address</span>
+                        <span class="badge-address badge-static-data">STATIC_ADDRESS</span>
+                        <span class="small text-secondary d-none d-sm-inline font-mono">Global data section pointer</span>
                     </div>
-                    <span class="font-mono fs-5 fw-bold" style="color: var(--cyber-purple);">{{ stats.static_addresses_count|default:"0" }}</span>
-                </a>
-
-                <a href="{% url 'offset_center' %}?tab=VIRTUAL_ADDRESS" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge-address badge-va">VIRTUAL_ADDRESS</span>
-                        <span class="small text-secondary d-none d-sm-inline font-mono">Runtime mapped virtual address</span>
-                    </div>
-                    <span class="font-mono fs-5 fw-bold" style="color: var(--cyber-green);">{{ stats.virtual_addresses_count|default:"0" }}</span>
-                </a>
-
-                <a href="{% url 'offset_center' %}?tab=FILE_OFFSET" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge-address badge-file-offset">FILE_OFFSET</span>
-                        <span class="small text-secondary d-none d-sm-inline font-mono">Physical file offset in executable binary</span>
-                    </div>
-                    <span class="font-mono fs-5 fw-bold" style="color: var(--cyber-pink);">{{ stats.file_offsets_count|default:"0" }}</span>
-                </a>
-            </div>
-
-            <div class="mt-4 pt-3 border-top border-secondary-subtle d-flex justify-content-between flex-wrap gap-2">
-                <a href="{% url 'offset_center' %}" class="btn-action-primary" style="font-size: 0.8rem;">
-                    <span>OFFSET CENTER // 照合一覧</span> &rarr;
-                </a>
-                <a href="{% url 'important_offsets' %}" class="btn-action-secondary" style="font-size: 0.8rem;">
-                    <span>RANKED CANDIDATES // 重要番地</span>
+                    <span class="font-mono fs-5 fw-bold text-pink" style="color: var(--cyber-pink);">{{ stats.static_addresses_count|default:"0" }}</span>
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Semantic Gameplay Relevance Chart -->
     <div class="col-12 col-lg-6">
         <div class="glass-card h-100">
             <div class="card-title">
-                <i class="bi bi-pie-chart text-warning"></i>
-                <span>SEMANTIC CATEGORY MATRIX // 分類分析</span>
+                <i class="bi bi-cloud-arrow-up text-info"></i>
+                <span>ANALYZE ANOTHER APK // 新規APK解析</span>
             </div>
-            <div class="card-subtitle">Transparent heuristic scoring across 24 analytical game data categories.</div>
+            <div class="card-subtitle">Upload another APK archive to inspect and compare.</div>
 
-            <div style="height: 250px; position: relative;" class="my-2">
-                <canvas id="categoryDistributionChart"></canvas>
-            </div>
-
-            <div class="d-flex flex-wrap gap-2 justify-content-center mt-3 pt-2">
-                <span class="cat-badge cat-HEALTH">Health</span>
-                <span class="cat-badge cat-DAMAGE">Damage</span>
-                <span class="cat-badge cat-COMBAT">Combat</span>
-                <span class="cat-badge cat-PLAYER">Player</span>
-                <span class="cat-badge cat-CURRENCY">Currency</span>
-                <span class="cat-badge cat-INVENTORY">Inventory</span>
-                <span class="cat-badge cat-WEAPON">Weapon</span>
-            </div>
-
-            <div class="text-center mt-3">
-                <a href="{% url 'category_dashboard' %}" class="btn-action-secondary py-1 px-3" style="font-size: 0.78rem;">
-                    <span>VIEW ALL 24 CATEGORIES // 全分類</span>
-                </a>
-            </div>
+            <form method="post" action="{% url 'dashboard' %}" enctype="multipart/form-data" class="mt-3">
+                {% csrf_token %}
+                <div class="p-3 mb-3 text-center" style="border: 2px dashed var(--cyber-cyan); background: rgba(0, 240, 255, 0.03); cursor: pointer;" onclick="document.getElementById('quickApkInput').click();">
+                    <i class="bi bi-file-earmark-plus-fill text-info fs-3"></i>
+                    <p class="font-mono small text-white mb-1 mt-1">CLICK TO SELECT ANOTHER GAME APK</p>
+                    <input type="file" name="file" id="quickApkInput" accept=".apk,.zip,.dat,.so" style="display: none;" onchange="this.form.submit();" required>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- Analysis Sessions (Desktop Table + Mobile Cards) -->
-<div class="glass-card mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <div>
-            <div class="card-title mb-0">
-                <i class="bi bi-folder-fill text-primary"></i>
-                <span>ANALYSIS TARGET SESSIONS // 解析セッション</span>
-            </div>
-            <div class="card-subtitle mb-0">Recent projects loaded and verified in your terminal.</div>
-        </div>
-        <a href="{% url 'project_list' %}" class="btn-action-secondary py-1 px-3" style="font-size: 0.78rem;">
-            <span>ALL SESSIONS ({{ stats.projects_count }})</span>
-        </a>
-    </div>
+{% endif %}
 
-    <!-- Desktop Table View -->
-    <div class="desktop-table-view">
-        <div class="table-responsive-custom">
-            <table class="analyzer-table">
-                <thead>
-                    <tr>
-                        <th>Project Name</th>
-                        <th>Platform</th>
-                        <th>Architecture</th>
-                        <th>Classes</th>
-                        <th>Offsets</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in recent_projects %}
-                    <tr>
-                        <td>
-                            <a href="{% url 'project_detail' p.id %}" class="fw-bold text-white text-decoration-none font-mono">
-                                {{ p.name }}
-                            </a>
-                        </td>
-                        <td><span class="badge bg-dark border border-secondary">{{ p.platform }}</span></td>
-                        <td><span class="badge-address badge-field-offset" style="font-size: 0.7rem;">{{ p.architecture }}</span></td>
-                        <td class="font-mono text-white">{{ p.classes_count }}</td>
-                        <td class="font-mono text-warning">{{ p.field_offsets_count }}</td>
-                        <td>
-                            {% if p.status == 'COMPLETE' %}
-                                <span class="badge bg-success text-black font-mono fw-bold">COMPLETE</span>
-                            {% elif p.status == 'FAILED' %}
-                                <span class="badge bg-danger text-white font-mono fw-bold">FAILED</span>
-                            {% else %}
-                                <span class="badge bg-primary text-white font-mono fw-bold">{{ p.status }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="small text-secondary font-mono">{{ p.created_at|date:"Y-m-d H:i" }}</td>
-                        <td class="text-end">
-                            <a href="{% url 'project_detail' p.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.76rem;">
-                                <span>Inspect</span>
-                                <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center py-4 text-secondary font-mono">
-                            [ NO SESSIONS DETECTED ] &bull; <a href="{% url 'upload' %}" class="text-warning">UPLOAD FIRST TARGET</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Mobile Cards View -->
-    <div class="mobile-cards-view">
-        <div class="d-flex flex-column gap-2">
-            {% for p in recent_projects %}
-            <div class="mobile-entity-card">
-                <div class="mobile-card-target-tag">
-                    <i class="bi bi-crosshair"></i> TARGET SESSION #{{ p.id }}
-                </div>
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <a href="{% url 'project_detail' p.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
-                            {{ p.name }}
-                        </a>
-                        <div class="d-flex gap-1 mt-1">
-                            <span class="badge bg-dark border border-secondary" style="font-size: 0.65rem;">{{ p.platform }}</span>
-                            <span class="badge-address badge-field-offset" style="font-size: 0.65rem; padding: 1px 6px;">{{ p.architecture }}</span>
-                        </div>
-                    </div>
-                    {% if p.status == 'COMPLETE' %}
-                        <span class="badge bg-success text-black font-mono" style="font-size: 0.65rem;">NOMINAL</span>
-                    {% else %}
-                        <span class="badge bg-primary font-mono" style="font-size: 0.65rem;">{{ p.status }}</span>
-                    {% endif %}
-                </div>
-                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
-                    <span class="font-mono text-secondary small">{{ p.classes_count }}c / {{ p.field_offsets_count }} offsets</span>
-                    <a href="{% url 'project_detail' p.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
-                        <span>Inspect</span>
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
-            </div>
-            {% empty %}
-            <div class="text-center py-4 text-secondary font-mono">[ NO SESSIONS DETECTED ]</div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const ctx = document.getElementById('categoryDistributionChart');
-    if (!ctx) return;
+document.addEventListener('DOMContentLoaded', function() {
+    var dropzone = document.getElementById('apkDropzone');
+    var fileInput = document.getElementById('directApkInput');
+    var display = document.getElementById('selectedApkDisplay');
     
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Health', 'Damage', 'Combat', 'Currency', 'Inventory', 'Player', 'Other'],
-            datasets: [{
-                data: [35, 25, 20, 15, 12, 10, 8],
-                backgroundColor: [
-                    '#ff0055', /* Cyber Pink */
-                    '#ff6600', /* Orange */
-                    '#bd00ff', /* Purple */
-                    '#ffe600', /* Acid Yellow */
-                    '#00f0ff', /* Cyan */
-                    '#00ff88', /* Green */
-                    '#475569'  /* Dim */
-                ],
-                borderColor: '#000000',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            cutout: '68%'
-        }
-    });
+    if (dropzone && fileInput) {
+        dropzone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropzone.style.borderColor = 'var(--cyber-pink)';
+            dropzone.style.background = 'rgba(255, 0, 85, 0.08)';
+        });
+        
+        dropzone.addEventListener('dragleave', function() {
+            dropzone.style.borderColor = 'var(--cyber-cyan)';
+            dropzone.style.background = 'rgba(0, 240, 255, 0.03)';
+        });
+        
+        dropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropzone.style.borderColor = 'var(--cyber-cyan)';
+            dropzone.style.background = 'rgba(0, 240, 255, 0.03)';
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                display.innerText = 'SELECTED: ' + e.dataTransfer.files[0].name;
+                display.style.display = 'block';
+            }
+        });
+
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length > 0) {
+                display.innerText = 'SELECTED: ' + fileInput.files[0].name;
+                display.style.display = 'block';
+            }
+        });
+    }
 });
 </script>
+
 {% endblock %}
