@@ -1,0 +1,232 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}{{ category_name }} // 分類詳細 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 領域別標的 DOMAIN CANDIDATES ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">{{ category_name }} CANDIDATES // 候補一覧</h1>
+            <span class="cat-badge cat-{{ category_name }} fs-6">{{ category_name }}</span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Ranked analytical candidates identified in the {{ category_name }} category domain.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'category_dashboard' %}" class="btn-action-secondary">
+            <i class="bi bi-arrow-left"></i>
+            <span>ALL CATEGORIES // 全分類</span>
+        </a>
+    </div>
+</div>
+
+<!-- Section Tabs -->
+<div class="pill-tabs-container mb-3" id="catDetailTabs">
+    <button type="button" class="pill-tab-item active" onclick="switchCatTab('catClassesTab', this)">
+        <i class="bi bi-boxes"></i> RANKED CLASSES // 型 ({{ classes|length }})
+    </button>
+    <button type="button" class="pill-tab-item" onclick="switchCatTab('catFieldsTab', this)">
+        <i class="bi bi-hash"></i> RANKED FIELDS // 変数 ({{ fields|length }})
+    </button>
+</div>
+
+<!-- Classes Section -->
+<div id="catClassesTabContent">
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="glass-card mb-4 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-boxes text-cyan" style="color: var(--cyber-cyan);"></i>
+                    <span>RANKED CLASSES // 評価順クラス ({{ classes|length }})</span>
+                </div>
+            </div>
+            <div class="table-responsive-custom">
+                <table class="analyzer-table">
+                    <thead>
+                        <tr>
+                            <th>Class Target</th>
+                            <th>Namespace</th>
+                            <th>Importance Score</th>
+                            <th>Confidence</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in classes %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'class_detail' c.id %}" class="fw-bold text-white text-decoration-none font-mono">
+                                    {{ c.name }}
+                                </a>
+                            </td>
+                            <td class="text-secondary small font-mono">{{ c.namespace|default:"<Global>" }}</td>
+                            <td>
+                                <span class="score-badge {% if c.importance_score >= 70 %}score-high{% elif c.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                                    {{ c.importance_score }}
+                                </span>
+                            </td>
+                            <td><span class="confidence-pill confidence-{{ c.confidence }}">{{ c.confidence }}</span></td>
+                            <td class="text-end">
+                                <a href="{% url 'class_detail' c.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.78rem;">Inspect</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-secondary font-mono">[ NO CLASSES CATEGORIZED UNDER {{ category_name }} ]</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view mb-4">
+        <div class="d-flex flex-column gap-2">
+            {% for c in classes %}
+            <div class="mobile-entity-card">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <a href="{% url 'class_detail' c.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
+                            {{ c.name }}
+                        </a>
+                        <div class="text-secondary small font-mono mt-1">{{ c.namespace|default:"<Global>" }}</div>
+                    </div>
+                    <span class="score-badge {% if c.importance_score >= 70 %}score-high{% elif c.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                        {{ c.importance_score }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                    <span class="confidence-pill confidence-{{ c.confidence }}">{{ c.confidence }}</span>
+                    <a href="{% url 'class_detail' c.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                        <span>Inspect</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="glass-card text-center py-4 text-secondary font-mono">[ NO CLASSES CATEGORIZED UNDER {{ category_name }} ]</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Fields Section -->
+<div id="catFieldsTabContent" style="display: none;">
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="glass-card mb-4 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-hash text-warning"></i>
+                    <span>RANKED FIELDS // 評価順変数 ({{ fields|length }})</span>
+                </div>
+            </div>
+            <div class="table-responsive-custom">
+                <table class="analyzer-table">
+                    <thead>
+                        <tr>
+                            <th>Field Target</th>
+                            <th>Parent Class</th>
+                            <th>Type</th>
+                            <th>Offset</th>
+                            <th>Score</th>
+                            <th>Confidence</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fields %}
+                        <tr>
+                            <td class="font-mono text-white fw-bold">{{ f.name }}</td>
+                            <td>
+                                <a href="{% url 'class_detail' f.class_def.id %}" class="text-secondary text-decoration-none small font-mono">
+                                    {{ f.class_def.name }}
+                                </a>
+                            </td>
+                            <td class="font-mono text-dim small">{{ f.type_name }}</td>
+                            <td>
+                                {% if f.offset_hex %}
+                                    <span class="badge-address badge-field-offset" data-copy="{{ f.offset_hex }}">{{ f.offset_hex }}</span>
+                                {% else %}
+                                    <span class="small text-dim font-mono">UNRESOLVED</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="score-badge {% if f.importance_score >= 70 %}score-high{% elif f.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                                    {{ f.importance_score }}
+                                </span>
+                            </td>
+                            <td><span class="confidence-pill confidence-{{ f.confidence }}">{{ f.confidence }}</span></td>
+                            <td class="text-end">
+                                <a href="{% url 'field_detail' f.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.78rem;">Inspect</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-secondary font-mono">[ NO FIELDS CATEGORIZED UNDER {{ category_name }} ]</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view mb-4">
+        <div class="d-flex flex-column gap-2">
+            {% for f in fields %}
+            <div class="mobile-entity-card">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <a href="{% url 'field_detail' f.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
+                            {{ f.name }}
+                        </a>
+                        <div class="text-secondary small font-mono mt-1">
+                            Class: <a href="{% url 'class_detail' f.class_def.id %}" class="text-info text-decoration-none">{{ f.class_def.name }}</a>
+                        </div>
+                        <div class="font-mono text-dim small mt-1">{{ f.type_name }}</div>
+                    </div>
+                    <span class="score-badge {% if f.importance_score >= 70 %}score-high{% elif f.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                        {{ f.importance_score }}
+                    </span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between text-secondary small pt-2 border-top border-secondary-subtle">
+                    <div>
+                        {% if f.offset_hex %}
+                            <span class="badge-address badge-field-offset" data-copy="{{ f.offset_hex }}">{{ f.offset_hex }}</span>
+                        {% else %}
+                            <span class="small text-dim font-mono">UNRESOLVED</span>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'field_detail' f.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                        <span>Inspect</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="glass-card text-center py-4 text-secondary font-mono">[ NO FIELDS CATEGORIZED UNDER {{ category_name }} ]</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function switchCatTab(tabId, el) {
+    document.querySelectorAll('#catDetailTabs .pill-tab-item').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    if (tabId === 'catClassesTab') {
+        document.getElementById('catClassesTabContent').style.display = 'block';
+        document.getElementById('catFieldsTabContent').style.display = 'none';
+    } else {
+        document.getElementById('catClassesTabContent').style.display = 'none';
+        document.getElementById('catFieldsTabContent').style.display = 'block';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,337 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Search // 探索結果: {{ query }} &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 広域標的探索 TARGET SCANNER ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">GLOBAL SEARCH // 広域標的探索</h1>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Query: <strong class="text-white">"{{ query }}"</strong> &bull; Matches: <span class="text-warning font-mono fw-bold">{{ results.total_count|default:"0" }}</span></p>
+    </div>
+</div>
+
+<div class="glass-card mb-4 p-3">
+    <form method="get" class="row g-2 align-items-center font-mono">
+        <div class="col-12 col-md-10">
+            <div class="input-group">
+                <span class="input-group-text bg-black border-2 border-dark text-warning"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control bg-dark text-white border-2 border-dark" placeholder="SEARCH TARGETS, RVAS, OFFSETS..." value="{{ query }}">
+            </div>
+        </div>
+        <div class="col-12 col-md-2">
+            <button type="submit" class="btn-action-primary w-100 justify-content-center py-2">
+                <i class="bi bi-search"></i>
+                <span>SCAN // 探索</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if results %}
+<!-- Category Tabs -->
+<div class="pill-tabs-container mb-3" id="searchResultsTabs">
+    <button type="button" class="pill-tab-item active" onclick="switchSearchTab('allTab', this)">
+        ALL TARGETS // 全結果 ({{ results.total_count }})
+    </button>
+    <button type="button" class="pill-tab-item" onclick="switchSearchTab('classesTab', this)">
+        CLASSES // 型 ({{ results.classes.total_matches }})
+    </button>
+    <button type="button" class="pill-tab-item" onclick="switchSearchTab('offsetsTab', this)">
+        OFFSETS & RVAS // 番地 ({{ results.offsets.total_matches }})
+    </button>
+    <button type="button" class="pill-tab-item" onclick="switchSearchTab('fieldsTab', this)">
+        FIELDS // 変数 ({{ results.fields.total_matches }})
+    </button>
+    <button type="button" class="pill-tab-item" onclick="switchSearchTab('methodsTab', this)">
+        METHODS // 関数 ({{ results.methods.total_matches }})
+    </button>
+</div>
+
+<div class="row g-4" id="searchResultsContent">
+    <!-- Matched Classes -->
+    <div class="col-12 col-lg-6 search-section" id="sectionClasses">
+        <div class="glass-card h-100 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-boxes text-cyan" style="color: var(--cyber-cyan);"></i>
+                    <span>MATCHED CLASSES // 一致型定義 ({{ results.classes.total_matches }})</span>
+                </div>
+            </div>
+            <!-- Desktop Table -->
+            <div class="desktop-table-view">
+                <div class="table-responsive-custom">
+                    <table class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Namespace</th>
+                                <th>Category</th>
+                                <th class="text-end">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in results.classes.items %}
+                            <tr>
+                                <td><a href="{{ c.url }}" class="fw-bold text-white text-decoration-none font-mono">{{ c.name }}</a></td>
+                                <td class="small text-secondary font-mono">{{ c.namespace|default:"-" }}</td>
+                                <td><span class="cat-badge cat-{{ c.category }}">{{ c.category }}</span></td>
+                                <td class="text-end font-mono text-success fw-bold">{{ c.score }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4 text-secondary font-mono">[ NO MATCHING CLASSES ]</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Mobile Cards -->
+            <div class="mobile-cards-view p-3">
+                <div class="d-flex flex-column gap-2">
+                    {% for c in results.classes.items %}
+                    <div class="mobile-entity-card">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <a href="{{ c.url }}" class="fw-bold text-white text-decoration-none font-mono fs-6">{{ c.name }}</a>
+                            <span class="score-badge score-high">{{ c.score }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center text-secondary small pt-2 border-top border-secondary-subtle">
+                            <span class="font-mono text-dim">{{ c.namespace|default:"-" }}</span>
+                            <span class="cat-badge cat-{{ c.category }}">{{ c.category }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3 text-secondary font-mono">[ NO MATCHING CLASSES ]</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matched Offsets & RVAs -->
+    <div class="col-12 col-lg-6 search-section" id="sectionOffsets">
+        <div class="glass-card h-100 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-compass-fill text-warning"></i>
+                    <span>MATCHED OFFSETS & RVAS // 一致番地 ({{ results.offsets.total_matches }})</span>
+                </div>
+            </div>
+            <!-- Desktop Table -->
+            <div class="desktop-table-view">
+                <div class="table-responsive-custom">
+                    <table class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Class</th>
+                                <th>Domain</th>
+                                <th class="text-end">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for o in results.offsets.items %}
+                            <tr>
+                                <td class="font-mono text-white fw-bold"><a href="{{ o.url }}" class="text-white text-decoration-none">{{ o.member_name }}</a></td>
+                                <td class="font-mono text-secondary small">{{ o.class_name }}</td>
+                                <td><span class="badge bg-dark border border-secondary font-mono small">{{ o.address_type }}</span></td>
+                                <td class="text-end">
+                                    <span class="badge-address {% if o.address_type == 'FIELD_OFFSET' %}badge-field-offset{% else %}badge-method-rva{% endif %}" data-copy="{{ o.value_hex }}">{{ o.value_hex }}</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4 text-secondary font-mono">[ NO MATCHING OFFSETS ]</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Mobile Cards -->
+            <div class="mobile-cards-view p-3">
+                <div class="d-flex flex-column gap-2">
+                    {% for o in results.offsets.items %}
+                    <div class="mobile-entity-card">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div>
+                                <a href="{{ o.url }}" class="fw-bold text-white text-decoration-none font-mono">{{ o.member_name }}</a>
+                                <div class="font-mono text-secondary small">{{ o.class_name }}</div>
+                            </div>
+                            <span class="badge-address {% if o.address_type == 'FIELD_OFFSET' %}badge-field-offset{% else %}badge-method-rva{% endif %}" data-copy="{{ o.value_hex }}">{{ o.value_hex }}</span>
+                        </div>
+                        <div class="pt-2 border-top border-secondary-subtle">
+                            <span class="badge bg-dark border border-secondary font-mono small">{{ o.address_type }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3 text-secondary font-mono">[ NO MATCHING OFFSETS ]</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matched Fields -->
+    <div class="col-12 col-lg-6 search-section" id="sectionFields">
+        <div class="glass-card h-100 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-hash text-warning"></i>
+                    <span>MATCHED FIELDS // 一致変数 ({{ results.fields.total_matches }})</span>
+                </div>
+            </div>
+            <!-- Desktop Table -->
+            <div class="desktop-table-view">
+                <div class="table-responsive-custom">
+                    <table class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Class</th>
+                                <th>Type</th>
+                                <th class="text-end">Offset</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for f in results.fields.items %}
+                            <tr>
+                                <td><a href="{{ f.url }}" class="fw-bold text-white text-decoration-none font-mono">{{ f.name }}</a></td>
+                                <td class="font-mono text-secondary small">{{ f.class_name }}</td>
+                                <td class="font-mono text-dim small">{{ f.type_name }}</td>
+                                <td class="text-end">
+                                    {% if f.offset_hex %}
+                                        <span class="badge-address badge-field-offset" data-copy="{{ f.offset_hex }}">{{ f.offset_hex }}</span>
+                                    {% else %}
+                                        <span class="small text-dim font-mono">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4 text-secondary font-mono">[ NO MATCHING FIELDS ]</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Mobile Cards -->
+            <div class="mobile-cards-view p-3">
+                <div class="d-flex flex-column gap-2">
+                    {% for f in results.fields.items %}
+                    <div class="mobile-entity-card">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div>
+                                <a href="{{ f.url }}" class="fw-bold text-white text-decoration-none font-mono">{{ f.name }}</a>
+                                <div class="font-mono text-secondary small">{{ f.class_name }}</div>
+                            </div>
+                            {% if f.offset_hex %}
+                                <span class="badge-address badge-field-offset" data-copy="{{ f.offset_hex }}">{{ f.offset_hex }}</span>
+                            {% else %}
+                                <span class="small text-dim font-mono">-</span>
+                            {% endif %}
+                        </div>
+                        <div class="font-mono text-dim small pt-2 border-top border-secondary-subtle">
+                            Type: {{ f.type_name }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3 text-secondary font-mono">[ NO MATCHING FIELDS ]</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matched Methods -->
+    <div class="col-12 col-lg-6 search-section" id="sectionMethods">
+        <div class="glass-card h-100 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-braces text-cyan" style="color: var(--cyber-cyan);"></i>
+                    <span>MATCHED METHODS // 一致関数 ({{ results.methods.total_matches }})</span>
+                </div>
+            </div>
+            <!-- Desktop Table -->
+            <div class="desktop-table-view">
+                <div class="table-responsive-custom">
+                    <table class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Class</th>
+                                <th>Return</th>
+                                <th class="text-end">RVA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in results.methods.items %}
+                            <tr>
+                                <td><a href="{{ m.url }}" class="fw-bold text-white text-decoration-none font-mono">{{ m.name }}</a></td>
+                                <td class="font-mono text-secondary small">{{ m.class_name }}</td>
+                                <td class="font-mono text-dim small">{{ m.return_type }}</td>
+                                <td class="text-end">
+                                    {% if m.rva_hex %}
+                                        <span class="badge-address badge-method-rva" data-copy="{{ m.rva_hex }}">{{ m.rva_hex }}</span>
+                                    {% else %}
+                                        <span class="small text-dim font-mono">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4 text-secondary font-mono">[ NO MATCHING METHODS ]</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Mobile Cards -->
+            <div class="mobile-cards-view p-3">
+                <div class="d-flex flex-column gap-2">
+                    {% for m in results.methods.items %}
+                    <div class="mobile-entity-card">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div>
+                                <a href="{{ m.url }}" class="fw-bold text-white text-decoration-none font-mono">{{ m.name }}</a>
+                                <div class="font-mono text-secondary small">{{ m.class_name }}</div>
+                            </div>
+                            {% if m.rva_hex %}
+                                <span class="badge-address badge-method-rva" data-copy="{{ m.rva_hex }}">{{ m.rva_hex }}</span>
+                            {% else %}
+                                <span class="small text-dim font-mono">-</span>
+                            {% endif %}
+                        </div>
+                        <div class="font-mono text-dim small pt-2 border-top border-secondary-subtle">
+                            Returns: {{ m.return_type }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3 text-secondary font-mono">[ NO MATCHING METHODS ]</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchSearchTab(tab, el) {
+    document.querySelectorAll('#searchResultsTabs .pill-tab-item').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    
+    const sections = {
+        'allTab': ['sectionClasses', 'sectionOffsets', 'sectionFields', 'sectionMethods'],
+        'classesTab': ['sectionClasses'],
+        'offsetsTab': ['sectionOffsets'],
+        'fieldsTab': ['sectionFields'],
+        'methodsTab': ['sectionMethods']
+    };
+
+    ['sectionClasses', 'sectionOffsets', 'sectionFields', 'sectionMethods'].forEach(id => {
+        const sec = document.getElementById(id);
+        if (sec) {
+            sec.style.display = sections[tab].includes(id) ? 'block' : 'none';
+        }
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

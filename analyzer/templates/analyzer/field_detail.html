@@ -1,0 +1,143 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}{{ field_obj.class_def.name }}.{{ field_obj.name }} // 変数仕様書 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 変数仕様書 FIELD SPECIFICATION ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-mono">{{ field_obj.class_def.name }}.<span class="text-warning">{{ field_obj.name }}</span></h1>
+            <span class="cat-badge cat-{{ field_obj.primary_category }}">{{ field_obj.primary_category }}</span>
+            <span class="confidence-pill confidence-{{ field_obj.confidence }}">{{ field_obj.confidence }} CONFIDENCE</span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Discovered member field with strict address attribution.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'class_detail' field_obj.class_def.id %}" class="btn-action-secondary">
+            <i class="bi bi-box-arrow-in-left"></i>
+            <span>PARENT CLASS // 親型</span>
+        </a>
+        <a href="{% url 'field_list' %}" class="btn-action-secondary">
+            <i class="bi bi-arrow-left"></i>
+            <span>ALL FIELDS // 全変数</span>
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Offset Information -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-compass-fill text-warning"></i>
+                <span>ADDRESS SPECIFICATION // メモリ変位仕様</span>
+            </div>
+            <div class="card-subtitle">Verified byte displacement inside the heap object.</div>
+
+            <div class="table-responsive-custom mt-3">
+                <table class="analyzer-table">
+                    <tbody>
+                        <tr>
+                            <td class="text-secondary font-mono" style="width: 40%;">Field Name</td>
+                            <td class="font-mono text-white fw-bold">{{ field_obj.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Parent Class</td>
+                            <td>
+                                <a href="{% url 'class_detail' field_obj.class_def.id %}" class="font-mono text-info text-decoration-none">
+                                    {{ field_obj.class_def.name }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Declared Type</td>
+                            <td class="font-mono text-white">{{ field_obj.type_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Storage Scope</td>
+                            <td>
+                                {% if field_obj.is_static %}
+                                    <span class="badge-address badge-static-addr">STATIC FIELD</span>
+                                {% else %}
+                                    <span class="badge-address badge-field-offset">INSTANCE FIELD</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Instance Field Offset</td>
+                            <td>
+                                {% if field_obj.offset_hex %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge-address badge-field-offset fs-6" data-copy="{{ field_obj.offset_hex }}">
+                                            {{ field_obj.offset_hex }}
+                                        </span>
+                                        <span class="text-secondary small font-mono">({{ field_obj.offset_value }} bytes)</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-dim font-mono">UNRESOLVED</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Classification</td>
+                            <td><span class="badge bg-black text-warning border border-warning font-mono">FIELD_OFFSET</span></td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Verification Status</td>
+                            <td>
+                                {% if field_obj.offset_hex %}
+                                    <span class="badge bg-success text-black font-mono fw-bold">VERIFIED FROM SUPPLIED ANALYSIS</span>
+                                {% else %}
+                                    <span class="text-secondary small font-mono">NOT IN SUPPLIED DUMP</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heuristic Scoring Breakdown -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-cpu-fill text-warning"></i>
+                <span>HEURISTIC SCORING AUDIT // 判定根拠</span>
+            </div>
+            <div class="card-subtitle">Transparent mathematical justification for heuristic ranking.</div>
+
+            <div class="d-flex align-items-center gap-3 my-3 p-3" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                <div class="score-badge {% if field_obj.importance_score >= 70 %}score-high{% elif field_obj.importance_score >= 40 %}score-med{% else %}score-low{% endif %} fs-4 px-3 py-2 font-mono">
+                    {{ field_obj.importance_score }}/100
+                </div>
+                <div>
+                    <div class="fw-bold text-white font-anime">HEURISTIC RANKING CANDIDATE</div>
+                    <div class="small text-secondary font-mono">Category: <strong class="text-warning">{{ field_obj.primary_category }}</strong></div>
+                </div>
+            </div>
+
+            <div class="small text-warning fw-bold text-uppercase mb-2 font-mono">// DETECTION AUDIT TRAIL:</div>
+            <div class="d-flex flex-column gap-2">
+                <div class="p-2 border border-dark small font-mono d-flex align-items-center gap-2" style="background: var(--cyber-panel);">
+                    <i class="bi bi-check-square-fill text-success"></i>
+                    <span>Semantic keyword match in <strong>{{ field_obj.primary_category }}</strong> domain</span>
+                </div>
+                <div class="p-2 border border-dark small font-mono d-flex align-items-center gap-2" style="background: var(--cyber-panel);">
+                    <i class="bi bi-check-square-fill text-success"></i>
+                    <span>Numeric/game-state primitive type (<code>{{ field_obj.type_name }}</code>)</span>
+                </div>
+                <div class="p-2 border border-dark small font-mono d-flex align-items-center gap-2" style="background: var(--cyber-panel);">
+                    <i class="bi bi-check-square-fill text-success"></i>
+                    <span>Declared inside target class: <code>{{ field_obj.class_def.name }}</code></span>
+                </div>
+                <div class="p-2 border border-dark small font-mono d-flex align-items-center gap-2" style="background: var(--cyber-panel);">
+                    <i class="bi bi-check-square-fill text-success"></i>
+                    <span>Context evaluation: <strong>{{ field_obj.context_type }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

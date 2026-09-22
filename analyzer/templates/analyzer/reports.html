@@ -1,0 +1,117 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Reports // 出力台帳 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 成果物出力 DOSSIER EXPORTS ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">ANALYSIS DOSSIERS & REPORTS // 出力台帳</h1>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Download verified machine-readable dumps (JSON, CSV) and formatted Markdown reports for offline research.</p>
+    </div>
+    {% if project %}
+    <a href="{% url 'project_detail' project.id %}" class="btn-action-secondary">
+        <i class="bi bi-folder2-open"></i>
+        <span>PROJECT DETAILS // 詳細</span>
+    </a>
+    {% endif %}
+</div>
+
+<div class="glass-card mb-4 p-0">
+    <div class="p-3 border-bottom border-dark">
+        <div class="card-title mb-0">
+            <i class="bi bi-file-earmark-arrow-down text-warning"></i>
+            <span>EXPORTABLE DOSSIERS // 出力可能ファイル ({{ reports|length }})</span>
+        </div>
+        <div class="card-subtitle mb-0 font-mono">Exported directly from the analysis database preserving source provenance.</div>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Report Filename</th>
+                        <th>File Format</th>
+                        <th>Size</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in reports %}
+                    <tr>
+                        <td>
+                            <i class="bi bi-file-earmark-text text-warning me-2"></i>
+                            <span class="font-mono text-white fw-bold">{{ r.name }}</span>
+                        </td>
+                        <td>
+                            {% if r.name|slice:"-3:" == ".md" %}
+                                <span class="badge-address badge-method-rva" style="font-size: 0.7rem;">MARKDOWN</span>
+                            {% elif r.name|slice:"-5:" == ".json" %}
+                                <span class="badge-address badge-field-offset" style="font-size: 0.7rem;">JSON</span>
+                            {% elif r.name|slice:"-4:" == ".csv" %}
+                                <span class="badge-address badge-va" style="font-size: 0.7rem;">CSV</span>
+                            {% else %}
+                                <span class="badge bg-secondary font-mono" style="font-size: 0.7rem;">TEXT</span>
+                            {% endif %}
+                        </td>
+                        <td class="font-mono text-secondary small">{{ r.size_kb }} KB</td>
+                        <td class="text-end">
+                            <a href="{% url 'download_report' project.id r.name %}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
+                                <i class="bi bi-download"></i>
+                                <span>DOWNLOAD // 出力</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-secondary font-mono">
+                            [ NO REPORT ARTIFACTS GENERATED YET ]
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view p-3">
+        <div class="d-flex flex-column gap-2">
+            {% for r in reports %}
+            <div class="mobile-entity-card">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div class="text-break font-mono">
+                        <i class="bi bi-file-earmark-text text-warning me-1"></i>
+                        <span class="text-white fw-bold small">{{ r.name }}</span>
+                    </div>
+                    {% if r.name|slice:"-3:" == ".md" %}
+                        <span class="badge-address badge-method-rva" style="font-size: 0.65rem;">MD</span>
+                    {% elif r.name|slice:"-5:" == ".json" %}
+                        <span class="badge-address badge-field-offset" style="font-size: 0.65rem;">JSON</span>
+                    {% elif r.name|slice:"-4:" == ".csv" %}
+                        <span class="badge-address badge-va" style="font-size: 0.65rem;">CSV</span>
+                    {% else %}
+                        <span class="badge bg-secondary font-mono" style="font-size: 0.65rem;">TXT</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                    <span class="font-mono text-secondary small">{{ r.size_kb }} KB</span>
+                    <a href="{% url 'download_report' project.id r.name %}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
+                        <i class="bi bi-download"></i>
+                        <span>DOWNLOAD</span>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4 text-secondary font-mono">
+                [ NO REPORT ARTIFACTS GENERATED ]
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

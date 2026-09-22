@@ -1,0 +1,365 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}IL2CPP Analyzer // 解析ターミナル{% endblock %}</title>
+    
+    <!-- Anime & Brutalist Typography: Chakra Petch, Space Grotesk & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom Application CSS (Brutalism x Anime) -->
+    <link rel="stylesheet" href="{% static 'analyzer/css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'analyzer/css/responsive.css' %}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Top Sticky Tactical Navigation Bar -->
+<header class="site-header">
+    <div class="header-container">
+        <!-- Brand Area -->
+        <a href="{% url 'dashboard' %}" class="brand-area">
+            <div class="brand-logo-badge">
+                <i class="bi bi-cpu-fill"></i>
+            </div>
+            <div>
+                <div class="brand-text">IL2CPP <span>// 解析</span></div>
+                <div class="brand-subtitle">[ TACTICAL ANALYZER ]</div>
+            </div>
+        </a>
+
+        <!-- Desktop Tactical Nav -->
+        <nav class="desktop-nav">
+            <a href="{% url 'dashboard' %}" class="nav-item-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2-fill"></i> OVERVIEW
+            </a>
+            <a href="{% url 'offset_center' %}" class="nav-item-link {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-compass-fill" style="color: var(--cyber-yellow);"></i> OFFSETS
+            </a>
+            <a href="{% url 'class_list' %}" class="nav-item-link {% if 'class' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-boxes" style="color: var(--cyber-cyan);"></i> CLASSES
+            </a>
+            <a href="{% url 'field_list' %}" class="nav-item-link {% if 'field' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-hash" style="color: var(--cyber-green);"></i> FIELDS
+            </a>
+            <a href="{% url 'method_list' %}" class="nav-item-link {% if 'method' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-braces" style="color: var(--cyber-purple);"></i> METHODS
+            </a>
+            <a href="{% url 'graph_view' %}" class="nav-item-link {% if request.resolver_match.url_name == 'graph_view' %}active{% endif %}">
+                <i class="bi bi-diagram-3-fill"></i> GRAPH
+            </a>
+            <a href="{% url 'project_compare' %}" class="nav-item-link {% if request.resolver_match.url_name == 'project_compare' %}active{% endif %}">
+                <i class="bi bi-arrow-left-right"></i> DIFF
+            </a>
+            <a href="{% url 'reports_view' %}" class="nav-item-link {% if request.resolver_match.url_name == 'reports_view' %}active{% endif %}">
+                <i class="bi bi-file-earmark-arrow-down-fill"></i> EXPORTS
+            </a>
+        </nav>
+
+        <!-- Header Actions -->
+        <div class="header-actions">
+            <!-- Command Palette Trigger -->
+            <button type="button" class="search-trigger-btn" id="openSearchModalBtn" title="Search Everything">
+                <i class="bi bi-search"></i>
+                <span>SEARCH TARGETS</span>
+                <kbd>Ctrl+K</kbd>
+            </button>
+
+            <!-- Active Target Tag -->
+            {% if active_project %}
+                <a href="{% url 'project_detail' active_project.id %}" class="btn-action-secondary d-none d-md-inline-flex" title="Active Project">
+                    <span class="badge-address badge-field-offset" style="padding: 2px 6px; font-size: 0.7rem;">
+                        {{ active_project.architecture }}
+                    </span>
+                    <span style="font-size: 0.8rem; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        {{ active_project.name }}
+                    </span>
+                </a>
+            {% endif %}
+
+            <!-- Upload Action -->
+            <a href="{% url 'upload' %}" class="btn-action-primary">
+                <i class="bi bi-cloud-arrow-up-fill"></i>
+                <span>UPLOAD</span>
+            </a>
+
+            <!-- Mobile Offcanvas Trigger -->
+            <button type="button" class="btn btn-dark d-lg-none p-2 border-2 border-dark" style="background: var(--cyber-surface); box-shadow: 2px 2px 0px #000;" data-bs-toggle="offcanvas" data-bs-target="#mobileToolsDrawer" aria-label="Open Tools">
+                <i class="bi bi-grid-fill text-white fs-6"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- Main Page Content -->
+<div class="main-wrapper" style="max-width: 1560px; margin: 0 auto; padding: 24px 20px 90px;">
+    {% block content %}{% endblock %}
+</div>
+
+<!-- Tactical Anime Mobile Bottom App Bar -->
+<nav class="mobile-bottom-bar">
+    <a href="{% url 'dashboard' %}" class="mobile-nav-btn {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-grid-1x2{% if request.resolver_match.url_name == 'dashboard' %}-fill{% endif %}"></i>
+        <span>OVERVIEW</span>
+    </a>
+    <a href="{% url 'offset_center' %}" class="mobile-nav-btn {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-compass{% if 'offset' in request.resolver_match.url_name %}-fill{% endif %}"></i>
+        <span>OFFSETS</span>
+    </a>
+    <a href="{% url 'class_list' %}" class="mobile-nav-btn {% if 'class' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-boxes"></i>
+        <span>CLASSES</span>
+    </a>
+    <button type="button" class="mobile-nav-btn border-0 bg-transparent" id="mobileSearchBtn">
+        <i class="bi bi-search"></i>
+        <span>SEARCH</span>
+    </button>
+    <button type="button" class="mobile-nav-btn border-0 bg-transparent" data-bs-toggle="offcanvas" data-bs-target="#mobileToolsDrawer">
+        <i class="bi bi-menu-button-wide"></i>
+        <span>TOOLS</span>
+    </button>
+</nav>
+
+<!-- Mobile Offcanvas Tools Drawer -->
+<div class="offcanvas offcanvas-bottom offcanvas-mobile-drawer" tabindex="-1" id="mobileToolsDrawer" style="height: 75vh; border-top: 3px solid var(--cyber-pink); border-radius: 0;">
+    <div class="offcanvas-header border-bottom border-dark py-3 px-4" style="background: #06070a;">
+        <h5 class="offcanvas-title text-white fs-6 fw-bold font-anime">
+            <i class="bi bi-tools text-warning me-2"></i> // TACTICAL RESEARCH TOOLS
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-3" style="background: #0a0d14;">
+        <div class="row g-2">
+            <div class="col-6">
+                <a href="{% url 'field_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-hash fs-3 text-info mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">FIELDS</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'method_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-braces fs-3 text-warning mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">METHODS</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'graph_view' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-diagram-3 fs-3 text-primary mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">GRAPH</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'dump_viewer' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-file-earmark-code fs-3 text-success mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">DUMP VIEWER</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'project_compare' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-arrow-left-right fs-3 text-danger mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">COMPARE</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'reports_view' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-file-earmark-arrow-down fs-3 text-secondary mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">EXPORTS</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'rule_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-sliders fs-3 text-info mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">RULES</span>
+                </a>
+            </div>
+            <div class="col-6">
+                <a href="{% url 'project_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 text-decoration-none" style="background: var(--cyber-surface); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <i class="bi bi-folder fs-3 text-warning mb-1"></i>
+                    <span class="text-white fw-bold font-anime small">PROJECTS</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Command Palette Spotlight Modal (Brutalism x Anime) -->
+<div class="cmd-modal-backdrop" id="cmdModalBackdrop">
+    <div class="cmd-modal">
+        <div class="cmd-input-wrapper">
+            <i class="bi bi-search text-warning fs-5"></i>
+            <input type="text" id="cmdModalInput" class="cmd-input" placeholder="SEARCH TARGETS, RVAS, OFFSETS..." autocomplete="off">
+            <kbd style="background: #000000; color: var(--cyber-pink); border: 1px solid var(--cyber-pink); font-family: var(--font-mono); font-size: 0.72rem; padding: 2px 6px;">ESC</kbd>
+        </div>
+        <div class="cmd-results" id="cmdResultsArea">
+            <div class="text-center py-4 text-secondary small font-mono">
+                [ TYPE AT LEAST 2 CHARACTERS TO ENGAGE TARGET SCANNER ]
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tap-To-Copy Feedback Toast -->
+<div class="copy-toast" id="copyToast">
+    <i class="bi bi-check-circle-fill" style="color: var(--cyber-yellow);"></i>
+    <span id="copyToastMsg">COPIED TO MEMORY LEDGER</span>
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Global Interaction Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modalBackdrop = document.getElementById('cmdModalBackdrop');
+    const modalInput = document.getElementById('cmdModalInput');
+    const openBtn = document.getElementById('openSearchModalBtn');
+    const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+    const resultsArea = document.getElementById('cmdResultsArea');
+
+    function openModal() {
+        modalBackdrop.style.display = 'flex';
+        modalInput.focus();
+        modalInput.select();
+    }
+
+    function closeModal() {
+        modalBackdrop.style.display = 'none';
+    }
+
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (mobileSearchBtn) mobileSearchBtn.addEventListener('click', openModal);
+
+    modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) closeModal();
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            if (modalBackdrop.style.display === 'flex') closeModal();
+            else openModal();
+        }
+        if (e.key === 'Escape' && modalBackdrop.style.display === 'flex') {
+            closeModal();
+        }
+    });
+
+    let debounceTimer;
+    modalInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const q = modalInput.value.trim();
+        if (q.length < 2) {
+            resultsArea.innerHTML = '<div class="text-center py-4 text-secondary small font-mono">[ TYPE AT LEAST 2 CHARACTERS ]</div>';
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetch(`/api/search/?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    renderCmdResults(data, q);
+                })
+                .catch(err => {
+                    resultsArea.innerHTML = '<div class="text-center py-4 text-danger small font-mono">[ SCANNER ERROR ]</div>';
+                });
+        }, 200);
+    });
+
+    function renderCmdResults(data, query) {
+        const counts = data.counts || {};
+        const total = (counts.classes || 0) + (counts.fields || 0) + (counts.methods || 0) + (counts.offsets || 0);
+        if (total === 0) {
+            resultsArea.innerHTML = `<div class="text-center py-4 text-secondary small font-mono">[ NO MATCHING TARGETS FOR "${query}" ]</div>`;
+            return;
+        }
+
+        let html = '';
+        if (data.results.offsets && data.results.offsets.length > 0) {
+            html += '<div class="px-3 py-1 font-anime text-warning" style="font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;">// OFFSETS & RVAS</div>';
+            data.results.offsets.forEach(o => {
+                const badge = o.address_type === 'FIELD_OFFSET' ? 'badge-field-offset' : 'badge-method-rva';
+                html += `
+                    <a href="${o.url}" class="cmd-item text-decoration-none">
+                        <div>
+                            <span class="font-mono fw-bold text-white">${o.class_name}.${o.member_name}</span>
+                            <span class="small text-secondary ms-2">[${o.address_type}]</span>
+                        </div>
+                        <span class="badge-address ${badge}">${o.value_hex}</span>
+                    </a>
+                `;
+            });
+        }
+
+        if (data.results.classes && data.results.classes.length > 0) {
+            html += '<div class="px-3 py-1 mt-2 font-anime text-info" style="font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;">// CLASSES</div>';
+            data.results.classes.forEach(c => {
+                html += `
+                    <a href="${c.url}" class="cmd-item text-decoration-none">
+                        <div>
+                            <span class="fw-bold text-white font-mono">${c.name}</span>
+                            <span class="small text-secondary ms-2">${c.namespace || ''}</span>
+                        </div>
+                        <span class="cat-badge cat-${c.category}">${c.category}</span>
+                    </a>
+                `;
+            });
+        }
+
+        if (data.results.fields && data.results.fields.length > 0) {
+            html += '<div class="px-3 py-1 mt-2 font-anime text-success" style="font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;">// FIELDS</div>';
+            data.results.fields.forEach(f => {
+                html += `
+                    <a href="${f.url}" class="cmd-item text-decoration-none">
+                        <div>
+                            <span class="text-secondary font-mono">${f.class_name}.</span><span class="fw-bold text-white font-mono">${f.name}</span>
+                            <span class="small text-dim ms-2 font-mono">${f.type_name}</span>
+                        </div>
+                        <span class="badge-address badge-field-offset">${f.offset_hex || '-'}</span>
+                    </a>
+                `;
+            });
+        }
+
+        resultsArea.innerHTML = html;
+    }
+
+    // Global copy to clipboard on .badge-address or [data-copy]
+    document.querySelectorAll('.badge-address, [data-copy]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            const val = el.getAttribute('data-copy') || el.innerText.trim();
+            if (val) {
+                navigator.clipboard.writeText(val).then(() => {
+                    showCopyToast(`COPIED: ${val}`);
+                });
+            }
+        });
+    });
+});
+
+function showCopyToast(msg) {
+    const toast = document.getElementById('copyToast');
+    const msgEl = document.getElementById('copyToastMsg');
+    if (!toast || !msgEl) return;
+    msgEl.innerText = msg;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2000);
+}
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

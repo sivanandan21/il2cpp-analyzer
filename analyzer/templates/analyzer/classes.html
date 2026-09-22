@@ -1,0 +1,198 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Class Explorer // 型構造解析 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 型構造探索 TYPE RECONSTRUCTION ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">CLASS EXPLORER // 型構造解析</h1>
+            <span class="badge-address badge-method-rva font-mono">{{ page_obj.paginator.count }} CLASSES</span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Reconstructed IL2CPP classes, inheritance hierarchies, and heuristic importance ranks.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'graph_view' %}" class="btn-action-secondary">
+            <i class="bi bi-diagram-3-fill"></i>
+            <span>VISUAL GRAPH // 系統図</span>
+        </a>
+    </div>
+</div>
+
+<!-- Category Quick Pills Carousel -->
+<div class="pill-tabs-container mb-3">
+    <a href="{% url 'class_list' %}{% if current_q %}?q={{ current_q }}{% endif %}" class="pill-tab-item {% if not current_category or current_category == 'ALL' %}active{% endif %}">
+        ALL CLASSES // 全型
+    </a>
+    {% for cat in categories %}
+    <a href="{% url 'class_list' %}?category={{ cat }}{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_category == cat %}active{% endif %}">
+        {{ cat }}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Search & Filters Bar -->
+<div class="glass-card mb-4 p-3">
+    <form method="get" class="row g-2 align-items-center">
+        <div class="col-12 col-md-5">
+            <div class="input-group">
+                <span class="input-group-text bg-black border-2 border-dark text-warning"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control bg-dark text-white border-2 border-dark font-mono" placeholder="SEARCH CLASS OR NAMESPACE..." value="{{ current_q }}">
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <select name="category" class="form-select bg-dark text-white border-2 border-dark font-mono">
+                <option value="ALL">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat }}" {% if current_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <select name="sort" class="form-select bg-dark text-white border-2 border-dark font-mono">
+                <option value="-importance_score" {% if current_sort == '-importance_score' %}selected{% endif %}>Highest Score</option>
+                <option value="importance_score" {% if current_sort == 'importance_score' %}selected{% endif %}>Lowest Score</option>
+                <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name (A-Z)</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-2">
+            <button type="submit" class="btn-action-primary flex-grow-1 justify-content-center">
+                <i class="bi bi-funnel"></i>
+                <span>FILTER</span>
+            </button>
+            <a href="{% url 'class_list' %}" class="btn-action-secondary px-3" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- Desktop Table View -->
+<div class="desktop-table-view">
+    <div class="glass-card p-0">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Class Name</th>
+                        <th>Namespace</th>
+                        <th>Category</th>
+                        <th>Score</th>
+                        <th>Confidence</th>
+                        <th>Context</th>
+                        <th>Base Class</th>
+                        <th class="text-end">Members</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'class_detail' c.id %}" class="fw-bold text-white text-decoration-none font-mono">
+                                {{ c.name }}
+                            </a>
+                            {% if c.is_enum %}
+                                <span class="badge bg-warning text-black ms-1 font-mono" style="font-size: 0.65rem;">ENUM</span>
+                            {% elif c.is_interface %}
+                                <span class="badge bg-info text-black ms-1 font-mono" style="font-size: 0.65rem;">INTERFACE</span>
+                            {% elif c.is_value_type %}
+                                <span class="badge bg-secondary text-white ms-1 font-mono" style="font-size: 0.65rem;">STRUCT</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-secondary font-mono">{{ c.namespace|default:"<Global>" }}</td>
+                        <td><span class="cat-badge cat-{{ c.primary_category }}">{{ c.primary_category }}</span></td>
+                        <td>
+                            <span class="score-badge {% if c.importance_score >= 70 %}score-high{% elif c.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                                {{ c.importance_score }}
+                            </span>
+                        </td>
+                        <td><span class="confidence-pill confidence-{{ c.confidence }}">{{ c.confidence }}</span></td>
+                        <td><span class="small text-secondary font-mono">{{ c.context_type }}</span></td>
+                        <td class="small text-dim font-mono">{{ c.base_class_name|default:"-" }}</td>
+                        <td class="text-end font-mono small text-secondary">
+                            <span class="text-white fw-bold">{{ c.fields.count }}f</span> / <span class="text-warning">{{ c.methods.count }}m</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-secondary font-mono">
+                            [ NO CLASSES MATCH FILTER SPECIFICATION ]
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Cards View -->
+<div class="mobile-cards-view">
+    <div class="d-flex flex-column gap-2">
+        {% for c in page_obj %}
+        <div class="mobile-entity-card">
+            <div class="mobile-card-target-tag">
+                <i class="bi bi-crosshair"></i> [ CLASS TYPE // 型定義 ]
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                    <a href="{% url 'class_detail' c.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
+                        {{ c.name }}
+                    </a>
+                    {% if c.is_enum %}
+                        <span class="badge bg-warning text-black ms-1 font-mono" style="font-size: 0.62rem;">ENUM</span>
+                    {% elif c.is_interface %}
+                        <span class="badge bg-info text-black ms-1 font-mono" style="font-size: 0.62rem;">INTERFACE</span>
+                    {% elif c.is_value_type %}
+                        <span class="badge bg-secondary text-white ms-1 font-mono" style="font-size: 0.62rem;">STRUCT</span>
+                    {% endif %}
+                    <div class="text-secondary small font-mono mt-1">{{ c.namespace|default:"<Global>" }}</div>
+                </div>
+                <div class="d-flex flex-column align-items-end gap-1">
+                    <span class="score-badge {% if c.importance_score >= 70 %}score-high{% elif c.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                        {{ c.importance_score }}
+                    </span>
+                    <span class="cat-badge cat-{{ c.primary_category }}" style="font-size: 0.65rem;">{{ c.primary_category }}</span>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between text-secondary small pt-2 border-top border-secondary-subtle">
+                <div class="font-mono text-dim" style="font-size: 0.74rem;">
+                    Base: <span class="text-white">{{ c.base_class_name|default:"System.Object" }}</span>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="font-mono text-warning" style="font-size: 0.74rem;">{{ c.fields.count }}f / {{ c.methods.count }}m</span>
+                    <a href="{% url 'class_detail' c.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                        <span>Inspect</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="glass-card text-center py-5 text-secondary font-mono">
+            [ NO CLASSES MATCH FILTER SPECIFICATION ]
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination pagination-sm gap-1">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page=1{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">&laquo; First</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.previous_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">Prev</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link bg-black text-warning border-2 border-dark px-3 py-2 font-mono fw-bold">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.next_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">Next</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.paginator.num_pages }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">Last &raquo;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endblock %}

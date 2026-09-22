@@ -1,0 +1,141 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Projects // プロジェクト一覧 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 標的一覧 TARGET SESSIONS ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">ANALYSIS PROJECTS // 解析プロジェクト一覧</h1>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Browse and manage all parsed IL2CPP sessions and binaries.</p>
+    </div>
+    <a href="{% url 'upload' %}" class="btn-action-primary">
+        <i class="bi bi-cloud-arrow-up-fill"></i>
+        <span>NEW INGESTION // 新規解析</span>
+    </a>
+</div>
+
+<div class="glass-card p-0">
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Project Identifier</th>
+                        <th>Platform</th>
+                        <th>Architecture</th>
+                        <th>Source</th>
+                        <th>Classes</th>
+                        <th>Methods</th>
+                        <th>Fields</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in projects %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'project_detail' p.id %}" class="fw-bold text-white text-decoration-none font-mono">
+                                {{ p.name }}
+                            </a>
+                            {% if p.unity_version != "UNKNOWN" %}
+                                <div class="small text-secondary font-mono">{{ p.unity_version }}</div>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-dark border border-secondary">{{ p.platform }}</span></td>
+                        <td><span class="badge-address badge-field-offset" style="font-size: 0.7rem;">{{ p.architecture }}</span></td>
+                        <td><span class="small text-secondary font-mono">{{ p.source_type }}</span></td>
+                        <td class="font-mono text-white">{{ p.classes_count }}</td>
+                        <td class="font-mono text-secondary">{{ p.methods_count }}</td>
+                        <td class="font-mono text-secondary">{{ p.fields_count }}</td>
+                        <td>
+                            {% if p.status == 'COMPLETE' %}
+                                <span class="badge bg-success text-black font-mono fw-bold">NOMINAL</span>
+                            {% elif p.status == 'FAILED' %}
+                                <span class="badge bg-danger text-white font-mono fw-bold">FAILED</span>
+                            {% else %}
+                                <span class="badge bg-primary text-white font-mono fw-bold">{{ p.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-secondary font-mono">{{ p.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{% url 'project_detail' p.id %}" class="btn-action-secondary py-1 px-2" title="Inspect">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'project_delete' p.id %}" class="btn btn-outline-danger btn-sm py-0 px-2 font-mono" style="border-radius: 0;" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-secondary font-mono">
+                            [ NO SESSIONS DETECTED &bull; <a href="{% url 'upload' %}" class="text-warning">CREATE FIRST TARGET</a> ]
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view p-3">
+        <div class="d-flex flex-column gap-2">
+            {% for p in projects %}
+            <div class="mobile-entity-card">
+                <div class="mobile-card-target-tag">
+                    <i class="bi bi-crosshair"></i> [ TARGET #{{ p.id }} // 標的 ]
+                </div>
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <a href="{% url 'project_detail' p.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
+                            {{ p.name }}
+                        </a>
+                        <div class="d-flex gap-1 mt-1 font-mono">
+                            <span class="badge bg-dark border border-secondary" style="font-size: 0.65rem;">{{ p.platform }}</span>
+                            <span class="badge-address badge-field-offset" style="font-size: 0.65rem; padding: 1px 6px;">{{ p.architecture }}</span>
+                        </div>
+                    </div>
+                    {% if p.status == 'COMPLETE' %}
+                        <span class="badge bg-success text-black font-mono" style="font-size: 0.65rem;">NOMINAL</span>
+                    {% else %}
+                        <span class="badge bg-primary font-mono" style="font-size: 0.65rem;">{{ p.status }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-between text-secondary small font-mono my-2 py-1 bg-black px-2 border border-dark">
+                    <span><strong class="text-white">{{ p.classes_count }}</strong> classes</span>
+                    <span><strong class="text-warning">{{ p.methods_count }}</strong> methods</span>
+                    <span><strong class="text-info">{{ p.fields_count }}</strong> fields</span>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                    <span class="small text-dim font-mono">{{ p.created_at|date:"M d, Y" }}</span>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'project_delete' p.id %}" class="btn btn-outline-danger btn-sm py-1 px-2 font-mono" style="font-size: 0.75rem;">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                        <a href="{% url 'project_detail' p.id %}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
+                            <span>OPEN // 展開</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-secondary font-mono">
+                [ NO SESSIONS DETECTED ]
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

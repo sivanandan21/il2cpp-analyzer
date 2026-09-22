@@ -1,0 +1,232 @@
+/* ==========================================================================
+   IL2CPP ANALYZER - NEO-BRUTALISM x ANIME MOBILE STYLES
+   Tactical HUD Mobile Navigation, Chunky Touch Targets, Mobile Dossier Cards
+   ========================================================================== */
+
+/* Tablet & Mobile Screens (< 992px) */
+@media (max-width: 991.98px) {
+  .desktop-nav {
+    display: none !important;
+  }
+
+  .site-header {
+    height: 58px;
+    padding: 0 14px;
+  }
+
+  .main-wrapper {
+    padding: 14px 12px 88px; /* 88px bottom padding for mobile tactical bar */
+  }
+
+  /* Show Mobile Bottom Tactical HUD Bar */
+  .mobile-bottom-bar {
+    display: flex !important;
+  }
+
+  .header-actions .search-trigger-btn span,
+  .header-actions .search-trigger-btn kbd {
+    display: none;
+  }
+
+  .search-trigger-btn {
+    padding: 7px 10px;
+  }
+}
+
+/* Smartphone Screens (< 768px) */
+@media (max-width: 767.98px) {
+  .brand-text {
+    font-size: 0.95rem;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .btn-action-primary span,
+  .btn-action-secondary span {
+    display: none;
+  }
+
+  .btn-action-primary,
+  .btn-action-secondary {
+    padding: 8px 12px;
+  }
+
+  /* Metrics Grid (2 columns on mobile) */
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 16px;
+  }
+
+  .metric-card {
+    padding: 12px 14px;
+  }
+
+  .metric-value {
+    font-size: 1.6rem;
+  }
+
+  .metric-top-label {
+    font-size: 0.65rem;
+  }
+
+  /* Horizontally Scrollable Touch Carousel */
+  .pill-tabs-container {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+  .pill-tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pill-tab-item {
+    flex-shrink: 0;
+    padding: 7px 14px !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* Dual View Control: Hide Desktop Table, Show Mobile Cards */
+  .desktop-table-view {
+    display: none !important;
+  }
+
+  .mobile-cards-view {
+    display: block !important;
+  }
+
+  .mobile-entity-card {
+    display: block !important;
+  }
+
+  /* Command Palette on Mobile */
+  .cmd-modal-backdrop {
+    padding: 16px 10px 10px;
+  }
+
+  .cmd-modal {
+    border-width: 2px;
+  }
+
+  .cmd-input-wrapper {
+    padding: 12px 14px;
+  }
+
+  .cmd-input {
+    font-size: 1rem;
+  }
+
+  /* Tactical Copy Toast on Mobile */
+  .copy-toast {
+    bottom: 80px;
+    right: 12px;
+    left: 12px;
+    justify-content: center;
+    font-size: 0.8rem;
+  }
+}
+
+/* Desktop Viewports (>= 768px) */
+@media (min-width: 768px) {
+  .mobile-cards-view {
+    display: none !important;
+  }
+  .desktop-table-view {
+    display: block !important;
+  }
+}
+
+/* Extra Small screens (< 420px) */
+@media (max-width: 419.98px) {
+  .metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ==========================================================================
+   TACTICAL ANIME MOBILE BOTTOM APP BAR
+   ========================================================================== */
+
+.mobile-bottom-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #08090f;
+  border-top: 2px solid #000000;
+  box-shadow: 0 -4px 0px rgba(0, 0, 0, 0.7);
+  z-index: 1050;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 0 4px;
+}
+
+.mobile-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--cyber-gray);
+  font-family: var(--font-anime);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 2px;
+  border: 1px solid transparent;
+  transition: all 0.12s ease;
+  position: relative;
+}
+
+.mobile-nav-btn i {
+  font-size: 1.25rem;
+  margin-bottom: 2px;
+  line-height: 1;
+}
+
+.mobile-nav-btn:hover {
+  color: var(--cyber-white);
+}
+
+.mobile-nav-btn.active {
+  color: #000000 !important;
+  background: var(--cyber-yellow);
+  border: 1px solid #000000;
+  box-shadow: inset 0 -2px 0px var(--cyber-pink);
+}
+
+.mobile-nav-btn.active i {
+  color: #000000 !important;
+}
+
+/* Offcanvas Drawer Mobile (Tools Menu) */
+.offcanvas-mobile-drawer {
+  background: #090c13 !important;
+  border-top: 3px solid var(--cyber-pink) !important;
+  color: #ffffff;
+}
+
+.offcanvas-mobile-drawer .list-group-item {
+  background: var(--cyber-surface);
+  border: 2px solid #000000;
+  color: #ffffff;
+  font-family: var(--font-anime);
+  font-weight: 700;
+  margin-bottom: 6px;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.offcanvas-mobile-drawer .list-group-item:hover {
+  background: var(--cyber-panel-alt);
+  border-color: var(--cyber-cyan);
+}

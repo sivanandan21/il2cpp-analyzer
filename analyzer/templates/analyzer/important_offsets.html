@@ -1,0 +1,199 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Important Offsets // 重要番地 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 優先度最高 PRIORITY TARGETS ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">IMPORTANT OFFSET ANALYSIS // 重要番地解析</h1>
+            <span class="score-badge score-high font-mono">TOP HEURISTIC RANK</span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Semantic candidates prioritized by gameplay keywords, state context, and member density.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'offset_center' %}" class="btn-action-secondary">
+            <i class="bi bi-arrow-left"></i>
+            <span>ALL OFFSETS // 全番地</span>
+        </a>
+    </div>
+</div>
+
+<div class="glass-card p-3 mb-4 d-flex align-items-center gap-3" style="border-left: 4px solid var(--cyber-yellow); background: var(--cyber-panel);">
+    <i class="bi bi-shield-exclamation fs-3 text-warning"></i>
+    <div class="small text-secondary font-mono">
+        <strong class="text-white">// ANALYTICAL NOTICE</strong>: These records represent transparent heuristic gameplay candidates indexed from supplied symbols and dumps.
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Top Field Offsets -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-hash text-warning"></i>
+                <span>HIGH-SCORING FIELD OFFSETS // 重要変数変位</span>
+            </div>
+            <div class="card-subtitle">Instance memory displacements with high gameplay relevance scores.</div>
+
+            <!-- Desktop Table View -->
+            <div class="desktop-table-view">
+                <div class="table-responsive-custom mt-3">
+                    <table class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Class / Field</th>
+                                <th>Offset</th>
+                                <th>Category</th>
+                                <th class="text-end">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in field_records %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-white font-mono">{{ a.class_name }}</div>
+                                    <div class="text-info font-mono small">{{ a.member_name }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge-address badge-field-offset" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                                </td>
+                                <td>
+                                    {% if a.field_def %}
+                                        <span class="cat-badge cat-{{ a.field_def.primary_category }}">{{ a.field_def.primary_category }}</span>
+                                    {% else %}
+                                        <span class="cat-badge cat-GENERAL">GENERAL</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <span class="score-badge {% if a.field_def.importance_score >= 70 %}score-high{% else %}score-med{% endif %}">
+                                        {{ a.field_def.importance_score|default:"75" }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4 text-secondary font-mono">[ NO HIGH-VALUE FIELD TARGETS ]</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mobile Cards View -->
+            <div class="mobile-cards-view mt-3">
+                <div class="d-flex flex-column gap-2">
+                    {% for a in field_records %}
+                    <div class="mobile-entity-card">
+                        <div class="mobile-card-target-tag">
+                            <i class="bi bi-crosshair"></i> [ FIELD TARGET // 標的 ]
+                        </div>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="fw-bold text-white font-mono fs-6">{{ a.class_name }}</div>
+                                <div class="font-mono text-info fw-bold small mt-1">{{ a.member_name }}</div>
+                            </div>
+                            <span class="score-badge {% if a.field_def.importance_score >= 70 %}score-high{% else %}score-med{% endif %}">
+                                {{ a.field_def.importance_score|default:"75" }}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                            <span class="badge-address badge-field-offset" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                            {% if a.field_def %}
+                                <span class="cat-badge cat-{{ a.field_def.primary_category }}">{{ a.field_def.primary_category }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3 text-secondary font-mono">[ NO HIGH-VALUE FIELD TARGETS ]</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Method RVAs -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-braces text-info"></i>
+                <span>HIGH-SCORING METHOD RVAS // 重要関数仮想番地</span>
+            </div>
+            <div class="card-subtitle">Native function execution pointers with high semantic relevance.</div>
+
+            <!-- Desktop Table View -->
+            <div class="desktop-table-view">
+                <div class="table-responsive-custom mt-3">
+                    <table class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Class / Method</th>
+                                <th>Method RVA</th>
+                                <th>Category</th>
+                                <th class="text-end">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in method_records %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-white font-mono">{{ a.class_name }}</div>
+                                    <div class="text-warning font-mono small">{{ a.member_name }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge-address badge-method-rva" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                                </td>
+                                <td>
+                                    {% if a.method_def %}
+                                        <span class="cat-badge cat-{{ a.method_def.primary_category }}">{{ a.method_def.primary_category }}</span>
+                                    {% else %}
+                                        <span class="cat-badge cat-GENERAL">GENERAL</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <span class="score-badge {% if a.method_def.importance_score >= 70 %}score-high{% else %}score-med{% endif %}">
+                                        {{ a.method_def.importance_score|default:"75" }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-4 text-secondary font-mono">[ NO HIGH-VALUE METHOD TARGETS ]</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mobile Cards View -->
+            <div class="mobile-cards-view mt-3">
+                <div class="d-flex flex-column gap-2">
+                    {% for a in method_records %}
+                    <div class="mobile-entity-card">
+                        <div class="mobile-card-target-tag">
+                            <i class="bi bi-crosshair"></i> [ METHOD RVA // 関数標的 ]
+                        </div>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="fw-bold text-white font-mono fs-6">{{ a.class_name }}</div>
+                                <div class="font-mono text-warning fw-bold small mt-1">{{ a.member_name }}</div>
+                            </div>
+                            <span class="score-badge {% if a.method_def.importance_score >= 70 %}score-high{% else %}score-med{% endif %}">
+                                {{ a.method_def.importance_score|default:"75" }}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                            <span class="badge-address badge-method-rva" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                            {% if a.method_def %}
+                                <span class="cat-badge cat-{{ a.method_def.primary_category }}">{{ a.method_def.primary_category }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3 text-secondary font-mono">[ NO HIGH-VALUE METHOD TARGETS ]</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

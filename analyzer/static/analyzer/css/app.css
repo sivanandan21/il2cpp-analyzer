@@ -1,0 +1,1020 @@
+/* ==========================================================================
+   IL2CPP ANALYZER - NEO-BRUTALISM x ANIME CYBERPUNK HUD THEME
+   Evangelion / Persona / Cyberpunk Tactical Reverse-Engineering Terminal
+   Bold 2-3px Hard Borders, Hard 3D Offset Shadows, Neon High-Voltage Accents
+   ========================================================================== */
+
+:root {
+  /* Tactical Anime Palette */
+  --cyber-bg: #06070a;
+  --cyber-canvas: #090b10;
+  --cyber-surface: #0e111a;
+  --cyber-panel: #131722;
+  --cyber-panel-alt: #1a1f2e;
+  --cyber-panel-light: #23293d;
+
+  /* High-Voltage Neon Accents */
+  --cyber-pink: #ff0055;       /* Evangelion Unit-01 / Persona 5 Magenta */
+  --cyber-pink-dark: #b8003d;
+  --cyber-yellow: #ffe600;     /* Warning Hazard Yellow */
+  --cyber-yellow-dark: #ccb800;
+  --cyber-cyan: #00f0ff;       /* Tactical Radar Cyan */
+  --cyber-cyan-dark: #00b8c4;
+  --cyber-green: #00ff88;      /* Verified Nominal Green */
+  --cyber-purple: #bd00ff;     /* Special Void Violet */
+  --cyber-orange: #ff6600;     /* Combat / Alert Orange */
+
+  --cyber-white: #ffffff;
+  --cyber-black: #000000;
+  --cyber-gray: #8d98af;
+  --cyber-dim: #4d576d;
+
+  /* Brutalist Hard 3D Shadows */
+  --shadow-brutal-black: 4px 4px 0px #000000;
+  --shadow-brutal-pink: 4px 4px 0px #ff0055;
+  --shadow-brutal-cyan: 4px 4px 0px #00f0ff;
+  --shadow-brutal-yellow: 4px 4px 0px #ffe600;
+  --shadow-brutal-hover: 6px 6px 0px #ff0055;
+  --shadow-brutal-active: 1px 1px 0px #000000;
+
+  /* Solid Brutal Borders */
+  --border-width: 2px;
+  --border-color: #252b3d;
+  --border-highlight: #ff0055;
+  --border-active: #00f0ff;
+
+  /* Typography */
+  --font-anime: 'Chakra Petch', sans-serif;
+  --font-display: 'Space Grotesk', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+  /* Geometric Radii (Sharp Brutal Cuts) */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+/* ==========================================================================
+   GLOBAL RESET & TACTICAL ANIME GRID
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: var(--cyber-bg);
+  color: #e2e8f0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Cyber Tactical Grid Background */
+body {
+  background-image: 
+    linear-gradient(rgba(255, 0, 85, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+  background-size: 32px 32px, 32px 32px, 16px 16px;
+  background-position: 0 0, 0 0, 0 0;
+}
+
+::selection {
+  background: var(--cyber-pink);
+  color: #ffffff;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #090b10;
+  border-left: 1px solid var(--border-color);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--cyber-panel-light);
+  border: 1px solid var(--border-color);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cyber-pink);
+}
+
+/* ==========================================================================
+   TYPOGRAPHY & JAPANESE ANIME MICRO-TAGS
+   ========================================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-anime);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--cyber-white);
+  margin-top: 0;
+}
+
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+.font-anime {
+  font-family: var(--font-anime) !important;
+}
+
+.anime-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cyber-yellow);
+}
+
+.anime-glitch-text {
+  position: relative;
+  display: inline-block;
+  color: var(--cyber-white);
+  text-shadow: 2px 2px 0px var(--cyber-pink), -2px -2px 0px var(--cyber-cyan);
+}
+
+/* Hazard Stripes Pattern */
+.hazard-stripe {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--cyber-yellow),
+    var(--cyber-yellow) 8px,
+    #000000 8px,
+    #000000 16px
+  );
+  height: 4px;
+  width: 100%;
+}
+
+.hazard-stripe-pink {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--cyber-pink),
+    var(--cyber-pink) 8px,
+    #000000 8px,
+    #000000 16px
+  );
+  height: 4px;
+  width: 100%;
+}
+
+/* ==========================================================================
+   TACTICAL TOP NAVIGATION BAR (BRUTALIST ANIME)
+   ========================================================================== */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  height: 64px;
+  background: #090b11;
+  border-bottom: 2px solid #000000;
+  box-shadow: 0 4px 0px rgba(0, 0, 0, 0.6);
+  padding: 0 20px;
+}
+
+.header-container {
+  max-width: 1560px;
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Brand Area */
+.brand-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.brand-logo-badge {
+  width: 38px;
+  height: 38px;
+  background: var(--cyber-pink);
+  color: #000000;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #00f0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 800;
+  transform: skew(-6deg);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.brand-area:hover .brand-logo-badge {
+  transform: skew(-6deg) scale(1.05);
+  box-shadow: 4px 4px 0px var(--cyber-yellow);
+}
+
+.brand-text {
+  font-family: var(--font-anime);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--cyber-white);
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.brand-text span {
+  color: var(--cyber-pink);
+}
+
+.brand-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--cyber-cyan);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Desktop Nav Items */
+.desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-item-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-anime);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  text-decoration: none;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.nav-item-link:hover {
+  color: var(--cyber-white);
+  background: var(--cyber-surface);
+  border: 2px solid var(--cyber-pink);
+  box-shadow: 3px 3px 0px #000000;
+  transform: translate(-1px, -1px);
+}
+
+.nav-item-link.active {
+  color: #000000 !important;
+  background: var(--cyber-yellow);
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px var(--cyber-pink);
+  transform: translate(-1px, -1px);
+}
+
+.nav-item-link.active i {
+  color: #000000 !important;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Command Palette Button */
+.search-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  background: var(--cyber-surface);
+  border: 2px solid var(--border-color);
+  box-shadow: 3px 3px 0px #000000;
+  color: var(--cyber-gray);
+  font-family: var(--font-display);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.search-trigger-btn:hover {
+  border-color: var(--cyber-cyan);
+  color: var(--cyber-white);
+  box-shadow: 4px 4px 0px var(--cyber-cyan);
+  transform: translate(-1px, -1px);
+}
+
+.search-trigger-btn kbd {
+  background: #000000;
+  color: var(--cyber-cyan);
+  border: 1px solid var(--cyber-cyan);
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   BRUTALIST BUTTON SYSTEM (TACTILE ARCADE PRESS)
+   ========================================================================== */
+
+.btn-action-primary,
+.btn-primary-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: var(--cyber-pink);
+  color: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  font-family: var(--font-anime);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+}
+
+.btn-action-primary:hover,
+.btn-primary-custom:hover {
+  background: #ff1f6d;
+  color: #ffffff;
+  box-shadow: 5px 5px 0px var(--cyber-cyan);
+  transform: translate(-2px, -2px);
+}
+
+.btn-action-primary:active,
+.btn-primary-custom:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+.btn-action-secondary,
+.btn-secondary-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--cyber-surface);
+  color: #f1f5f9;
+  border: 2px solid var(--border-color);
+  box-shadow: 4px 4px 0px #000000;
+  font-family: var(--font-anime);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
+}
+
+.btn-action-secondary:hover,
+.btn-secondary-custom:hover {
+  background: var(--cyber-panel);
+  color: #ffffff;
+  border-color: var(--cyber-yellow);
+  box-shadow: 5px 5px 0px var(--cyber-yellow);
+  transform: translate(-2px, -2px);
+}
+
+.btn-action-secondary:active,
+.btn-secondary-custom:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+/* Yellow Callout Button */
+.btn-action-yellow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: var(--cyber-yellow);
+  color: #000000;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  font-family: var(--font-anime);
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.btn-action-yellow:hover {
+  color: #000000;
+  box-shadow: 5px 5px 0px var(--cyber-pink);
+  transform: translate(-2px, -2px);
+}
+
+.btn-action-yellow:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+/* ==========================================================================
+   BRUTALIST ANIME CARDS & PANELS
+   ========================================================================== */
+
+.glass-card {
+  background: var(--cyber-surface);
+  border: 2px solid #000000;
+  box-shadow: 5px 5px 0px #000000;
+  padding: 20px;
+  position: relative;
+  transition: border-color 0.15s ease;
+}
+
+.glass-card:hover {
+  border-color: #2e354b;
+}
+
+.glass-card-highlight {
+  border-color: var(--cyber-pink);
+  box-shadow: 5px 5px 0px var(--cyber-pink);
+}
+
+/* Card Header Structure */
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-anime);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cyber-white);
+  margin-bottom: 4px;
+}
+
+.card-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--cyber-gray);
+  margin-bottom: 14px;
+}
+
+/* Corner Bracket Accents (Mecha Crosshairs) */
+.mecha-bracket {
+  position: relative;
+}
+.mecha-bracket::before {
+  content: '+';
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--cyber-cyan);
+  opacity: 0.7;
+}
+.mecha-bracket::after {
+  content: '+';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--cyber-cyan);
+  opacity: 0.7;
+}
+
+/* ==========================================================================
+   METRICS GRID (COCKPIT TELEMETRY)
+   ========================================================================== */
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: var(--cyber-surface);
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  padding: 16px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.metric-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px var(--cyber-cyan);
+  border-color: var(--cyber-cyan);
+}
+
+.metric-card.pink-accent:hover {
+  box-shadow: 6px 6px 0px var(--cyber-pink);
+  border-color: var(--cyber-pink);
+}
+
+.metric-card.yellow-accent:hover {
+  box-shadow: 6px 6px 0px var(--cyber-yellow);
+  border-color: var(--cyber-yellow);
+}
+
+.metric-top-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cyber-gray);
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-family: var(--font-anime);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--cyber-white);
+  margin-bottom: 4px;
+}
+
+.metric-sub {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--cyber-dim);
+}
+
+/* ==========================================================================
+   STRICT ADDRESS SEPARATION SYSTEM (INVERTED HIGH-VOLTAGE CHIPS)
+   ========================================================================== */
+
+.badge-address {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 2px solid #000000;
+  cursor: pointer;
+  user-select: all;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.badge-address:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.badge-address:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+/* 1. FIELD_OFFSET: Acid Neon Yellow */
+.badge-field-offset {
+  background: var(--cyber-yellow);
+  color: #000000 !important;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+/* 2. METHOD_RVA: Electric Cyan */
+.badge-method-rva {
+  background: var(--cyber-cyan);
+  color: #000000 !important;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+/* 3. FILE_OFFSET: Cyber Pink */
+.badge-file-offset {
+  background: var(--cyber-pink);
+  color: #ffffff !important;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+/* 4. STATIC_ADDR: Ultra Violet */
+.badge-static-addr {
+  background: var(--cyber-purple);
+  color: #ffffff !important;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+/* 5. VIRTUAL_ADDR: Toxic Mint */
+.badge-va {
+  background: var(--cyber-green);
+  color: #000000 !important;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+/* Address chip with dot */
+.addr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  border: 2px solid #000000;
+  cursor: pointer;
+}
+
+.addr-chip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  background: currentColor;
+}
+
+/* ==========================================================================
+   CATEGORY BADGES & CONFIDENCE PILLS (ANIME HUD)
+   ========================================================================== */
+
+.cat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: var(--font-anime);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.cat-HEALTH { color: #ff0055; border-color: #ff0055; }
+.cat-DAMAGE { color: #ff6600; border-color: #ff6600; }
+.cat-COMBAT { color: #bd00ff; border-color: #bd00ff; }
+.cat-CURRENCY { color: #ffe600; border-color: #ffe600; }
+.cat-INVENTORY { color: #00f0ff; border-color: #00f0ff; }
+.cat-PLAYER { color: #00ff88; border-color: #00ff88; }
+.cat-ENEMY { color: #ff3366; border-color: #ff3366; }
+.cat-WEAPON { color: #ff8800; border-color: #ff8800; }
+.cat-MOVEMENT { color: #38bdf8; border-color: #38bdf8; }
+.cat-NETWORK { color: #818cf8; border-color: #818cf8; }
+.cat-STATE { color: #a3e635; border-color: #a3e635; }
+.cat-GENERAL { color: #94a3b8; border-color: #94a3b8; }
+
+/* Confidence Pill */
+.confidence-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.confidence-HIGH { color: var(--cyber-green); border-color: var(--cyber-green); background: rgba(0, 255, 136, 0.1); }
+.confidence-MEDIUM { color: var(--cyber-yellow); border-color: var(--cyber-yellow); background: rgba(255, 230, 0, 0.1); }
+.confidence-LOW { color: var(--cyber-gray); border-color: var(--cyber-gray); background: rgba(148, 163, 184, 0.1); }
+
+/* Score Badges */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 800;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+}
+.score-high { background: var(--cyber-green); color: #000000; }
+.score-med { background: var(--cyber-yellow); color: #000000; }
+.score-low { background: #334155; color: #ffffff; }
+
+/* ==========================================================================
+   PILL TABS CONTAINER (TOUCH-SWIPEABLE HORIZONTAL CAROUSEL)
+   ========================================================================== */
+
+.pill-tabs-container {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 4px 2px 8px;
+}
+.pill-tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+.pill-tab-item {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--cyber-surface);
+  color: #cbd5e1;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+  font-family: var(--font-anime);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.1s ease;
+}
+
+.pill-tab-item:hover {
+  color: #ffffff;
+  border-color: var(--cyber-cyan);
+  box-shadow: 4px 4px 0px var(--cyber-cyan);
+  transform: translate(-1px, -1px);
+}
+
+.pill-tab-item.active {
+  background: var(--cyber-pink);
+  color: #ffffff !important;
+  border-color: #000000;
+  box-shadow: 4px 4px 0px var(--cyber-yellow);
+  transform: translate(-1px, -1px);
+}
+
+/* ==========================================================================
+   TABLES (NEO-BRUTALIST HIGH-CONTRAST)
+   ========================================================================== */
+
+.table-responsive-custom {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.analyzer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  background: var(--cyber-surface);
+}
+
+.analyzer-table th {
+  font-family: var(--font-anime);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cyber-cyan);
+  background: #090c13;
+  padding: 12px 14px;
+  border-bottom: 2px solid #000000;
+  border-top: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.analyzer-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #1a2030;
+  color: #e2e8f0;
+  vertical-align: middle;
+}
+
+.analyzer-table tbody tr {
+  transition: background 0.1s ease;
+}
+
+.analyzer-table tbody tr:hover {
+  background: var(--cyber-panel-alt);
+}
+
+/* ==========================================================================
+   MOBILE TARGET DOSSIER CARDS (.mobile-entity-card)
+   ========================================================================== */
+
+.mobile-entity-card {
+  background: var(--cyber-surface);
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.mobile-entity-card:hover,
+.mobile-entity-card:active {
+  border-color: var(--cyber-pink);
+  box-shadow: 4px 4px 0px var(--cyber-pink);
+  transform: translate(-1px, -1px);
+}
+
+.mobile-card-target-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--cyber-cyan);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   COMMAND PALETTE SPOTLIGHT MODAL (CTRL+K)
+   ========================================================================== */
+
+.cmd-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 2000;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px 16px 20px;
+}
+
+.cmd-modal {
+  width: 100%;
+  max-width: 680px;
+  background: #0d111a;
+  border: 3px solid #000000;
+  box-shadow: 8px 8px 0px var(--cyber-pink);
+  overflow: hidden;
+  animation: brutalPop 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes brutalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.cmd-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 2px solid #000000;
+  background: #07090f;
+}
+
+.cmd-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cmd-input::placeholder {
+  color: var(--cyber-dim);
+}
+
+.cmd-results {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.cmd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.1s ease;
+}
+
+.cmd-item:hover,
+.cmd-item.selected {
+  background: var(--cyber-panel-alt);
+  border-left-color: var(--cyber-cyan);
+}
+
+/* ==========================================================================
+   TAP-TO-COPY TOAST NOTIFICATION
+   ========================================================================== */
+
+.copy-toast {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: #000000;
+  color: var(--cyber-yellow);
+  border: 2px solid var(--cyber-yellow);
+  box-shadow: 4px 4px 0px var(--cyber-pink);
+  padding: 10px 18px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 3000;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.copy-toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ==========================================================================
+   UPLOAD DROPZONE (ANIME CYBERPUNK)
+   ========================================================================== */
+
+.upload-dropzone {
+  border: 3px dashed var(--cyber-cyan);
+  background: rgba(0, 240, 255, 0.03);
+  box-shadow: 4px 4px 0px #000000;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+  border-color: var(--cyber-pink);
+  background: rgba(255, 0, 85, 0.06);
+  box-shadow: 6px 6px 0px var(--cyber-pink);
+  transform: translate(-2px, -2px);
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: var(--cyber-cyan);
+  margin-bottom: 12px;
+}
+
+.upload-dropzone:hover .upload-icon {
+  color: var(--cyber-pink);
+}
+
+/* Pipeline Step Item */
+.pipeline-step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--cyber-surface);
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  margin-bottom: 6px;
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  background: var(--cyber-cyan);
+  color: #000000;
+  border: 1px solid #000000;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

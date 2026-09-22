@@ -1,0 +1,148 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Rule Editor // ルール設定 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ ルール設定 RULE ENGINE ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">RULE & SYNONYM EDITOR // ルール設定</h1>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Configure category keywords, types, and heuristic scoring weights dynamically.</p>
+    </div>
+    <a href="{% url 'category_dashboard' %}" class="btn-action-secondary">
+        <i class="bi bi-grid-fill"></i>
+        <span>CATEGORIES // 分類一覧</span>
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Add Rule Form -->
+    <div class="col-12 col-lg-5">
+        <div class="glass-card">
+            <div class="card-title">
+                <i class="bi bi-plus-circle text-warning"></i>
+                <span>ADD / UPDATE RULE // ルール追加・更新</span>
+            </div>
+            <div class="card-subtitle font-mono">Tune keyword matching and types without editing backend code.</div>
+
+            <form method="post" class="mt-3 font-mono">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label text-white small fw-bold">// CATEGORY DOMAIN</label>
+                    {{ form.category }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white small fw-bold">// KEYWORDS & SYNONYMS</label>
+                    {{ form.keywords_text }}
+                    <div class="form-text text-secondary small">Comma-separated terms (e.g. health, hp, life, vitality).</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white small fw-bold">// RELEVANT TYPES</label>
+                    {{ form.types_text }}
+                    <div class="form-text text-secondary small">Comma-separated primitives (e.g. float, int, double).</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white small fw-bold">// IMPORTANCE WEIGHT</label>
+                    {{ form.weight }}
+                </div>
+                <div class="mb-3 form-check">
+                    {{ form.is_active }}
+                    <label class="form-check-label text-white small">Active in scoring pipeline // 有効</label>
+                </div>
+                <button type="submit" class="btn-action-primary w-100 justify-content-center py-2">
+                    <i class="bi bi-save"></i>
+                    <span>SAVE CATEGORY RULE // 保存</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Active Rules List -->
+    <div class="col-12 col-lg-7">
+        <div class="glass-card h-100 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-sliders text-info"></i>
+                    <span>CONFIGURED RULES // 適用中ルール ({{ rules|length }})</span>
+                </div>
+                <div class="card-subtitle mb-0 font-mono">Configured semantic rules applied during project ingestion.</div>
+            </div>
+
+            <!-- Desktop Table View -->
+            <div class="desktop-table-view">
+                <div class="table-responsive-custom">
+                    <table class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Keywords</th>
+                                <th>Weight</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in rules %}
+                            <tr>
+                                <td><span class="cat-badge cat-{{ r.category }}">{{ r.category }}</span></td>
+                                <td class="small text-secondary font-mono">{{ r.keywords_json|join:", "|truncatechars:35 }}</td>
+                                <td class="font-mono text-white">{{ r.weight }}</td>
+                                <td>
+                                    {% if r.is_active %}
+                                        <span class="badge bg-success text-black font-mono">ACTIVE</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary font-mono">OFF</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'rule_delete' r.id %}" class="btn btn-sm btn-outline-danger py-0 px-2 font-mono">Delete</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-secondary font-mono">
+                                    [ NO CUSTOM RULES DEFINED &bull; DEFAULT HEURISTICS NOMINAL ]
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mobile Cards View -->
+            <div class="mobile-cards-view p-3">
+                <div class="d-flex flex-column gap-2">
+                    {% for r in rules %}
+                    <div class="mobile-entity-card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="cat-badge cat-{{ r.category }} fs-6">{{ r.category }}</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="font-mono text-white small">Weight: {{ r.weight }}</span>
+                                {% if r.is_active %}
+                                    <span class="badge bg-success text-black" style="font-size: 0.65rem;">ACTIVE</span>
+                                {% else %}
+                                    <span class="badge bg-secondary" style="font-size: 0.65rem;">OFF</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="small text-secondary font-mono text-break mb-2">
+                            {{ r.keywords_json|join:", "|truncatechars:60 }}
+                        </div>
+                        <div class="d-flex justify-content-end pt-2 border-top border-secondary-subtle">
+                            <a href="{% url 'rule_delete' r.id %}" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.75rem;">Delete</a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-secondary font-mono">
+                        [ NO CUSTOM RULES DEFINED ]
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

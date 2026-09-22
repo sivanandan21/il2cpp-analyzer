@@ -1,0 +1,320 @@
+{% extends 'analyzer/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard // 統括司令室 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<!-- Top Cockpit Header -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 状態 STATUS: 正常 NOMINAL ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">TACTICAL DASHBOARD // 統括指令室</h1>
+            {% if active_project %}
+                <span class="badge-address badge-field-offset" style="font-size: 0.72rem;">
+                    {{ active_project.platform }} / {{ active_project.architecture }}
+                </span>
+            {% endif %}
+        </div>
+        <p class="text-secondary small mb-0 font-mono">
+            Target: <strong class="text-white">{% if active_project %}{{ active_project.name }}{% else %}NO ACTIVE TARGET{% endif %}</strong> &bull; Non-fabricating IL2CPP metadata & native code analyzer.
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'upload' %}" class="btn-action-primary">
+            <i class="bi bi-cloud-arrow-up-fill"></i>
+            <span>NEW INGESTION // 新規解析</span>
+        </a>
+        <a href="{% url 'reports_view' %}" class="btn-action-secondary">
+            <i class="bi bi-file-earmark-arrow-down-fill"></i>
+            <span>DOSSIERS // 出力</span>
+        </a>
+    </div>
+</div>
+
+<!-- Warning Hazard Stripe -->
+<div class="hazard-stripe mb-4"></div>
+
+<!-- Cockpit 4-Metric Grid (Chunky Brutalist Telemetry Units) -->
+<div class="metrics-grid mb-4">
+    <div class="metric-card yellow-accent">
+        <div class="metric-top-label">
+            <span>INDEXED CLASSES // 構造</span>
+            <i class="bi bi-boxes" style="color: var(--cyber-yellow);"></i>
+        </div>
+        <div class="metric-value">{{ stats.classes_count|default:"0" }}</div>
+        <div class="metric-sub font-mono">[ RECONSTRUCTED TYPES ]</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-top-label">
+            <span>DISCOVERED FIELDS // 変数</span>
+            <i class="bi bi-hash" style="color: var(--cyber-cyan);"></i>
+        </div>
+        <div class="metric-value">{{ stats.fields_count|default:"0" }}</div>
+        <div class="metric-sub font-mono">[ INSTANCE MEMBERS ]</div>
+    </div>
+
+    <div class="metric-card pink-accent">
+        <div class="metric-top-label">
+            <span>MAPPED METHODS // 関数</span>
+            <i class="bi bi-braces" style="color: var(--cyber-pink);"></i>
+        </div>
+        <div class="metric-value">{{ stats.methods_count|default:"0" }}</div>
+        <div class="metric-sub font-mono">[ NATIVE CODE POINTERS ]</div>
+    </div>
+
+    <div class="metric-card yellow-accent">
+        <div class="metric-top-label">
+            <span>FIELD OFFSETS // 照合</span>
+            <i class="bi bi-compass-fill" style="color: var(--cyber-yellow);"></i>
+        </div>
+        <div class="metric-value text-warning">{{ stats.field_offsets_count|default:"0" }}</div>
+        <div class="metric-sub font-mono">[ VERIFIED DISPLACEMENTS ]</div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Strict Address System Ledger -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-shield-check text-warning"></i>
+                <span>ADDRESS SEPARATION LEDGER // 番地分離台帳</span>
+            </div>
+            <div class="card-subtitle">Five strictly isolated address representations. No cross-contamination.</div>
+
+            <div class="d-flex flex-column gap-2 mt-3">
+                <a href="{% url 'offset_center' %}?tab=FIELD_OFFSET" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge-address badge-field-offset">FIELD_OFFSET</span>
+                        <span class="small text-secondary d-none d-sm-inline font-mono">Heap instance byte displacement</span>
+                    </div>
+                    <span class="font-mono fs-5 fw-bold text-warning">{{ stats.field_offsets_count|default:"0" }}</span>
+                </a>
+
+                <a href="{% url 'offset_center' %}?tab=METHOD_RVA" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge-address badge-method-rva">METHOD_RVA</span>
+                        <span class="small text-secondary d-none d-sm-inline font-mono">Relative virtual code pointer</span>
+                    </div>
+                    <span class="font-mono fs-5 fw-bold text-info">{{ stats.method_rvas_count|default:"0" }}</span>
+                </a>
+
+                <a href="{% url 'offset_center' %}?tab=STATIC_ADDRESS" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge-address badge-static-addr">STATIC_ADDRESS</span>
+                        <span class="small text-secondary d-none d-sm-inline font-mono">Global class storage address</span>
+                    </div>
+                    <span class="font-mono fs-5 fw-bold" style="color: var(--cyber-purple);">{{ stats.static_addresses_count|default:"0" }}</span>
+                </a>
+
+                <a href="{% url 'offset_center' %}?tab=VIRTUAL_ADDRESS" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge-address badge-va">VIRTUAL_ADDRESS</span>
+                        <span class="small text-secondary d-none d-sm-inline font-mono">Runtime mapped virtual address</span>
+                    </div>
+                    <span class="font-mono fs-5 fw-bold" style="color: var(--cyber-green);">{{ stats.virtual_addresses_count|default:"0" }}</span>
+                </a>
+
+                <a href="{% url 'offset_center' %}?tab=FILE_OFFSET" class="d-flex justify-content-between align-items-center p-3 text-decoration-none" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge-address badge-file-offset">FILE_OFFSET</span>
+                        <span class="small text-secondary d-none d-sm-inline font-mono">Physical file offset in executable binary</span>
+                    </div>
+                    <span class="font-mono fs-5 fw-bold" style="color: var(--cyber-pink);">{{ stats.file_offsets_count|default:"0" }}</span>
+                </a>
+            </div>
+
+            <div class="mt-4 pt-3 border-top border-secondary-subtle d-flex justify-content-between flex-wrap gap-2">
+                <a href="{% url 'offset_center' %}" class="btn-action-primary" style="font-size: 0.8rem;">
+                    <span>OFFSET CENTER // 照合一覧</span> &rarr;
+                </a>
+                <a href="{% url 'important_offsets' %}" class="btn-action-secondary" style="font-size: 0.8rem;">
+                    <span>RANKED CANDIDATES // 重要番地</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Semantic Gameplay Relevance Chart -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-pie-chart text-warning"></i>
+                <span>SEMANTIC CATEGORY MATRIX // 分類分析</span>
+            </div>
+            <div class="card-subtitle">Transparent heuristic scoring across 24 analytical game data categories.</div>
+
+            <div style="height: 250px; position: relative;" class="my-2">
+                <canvas id="categoryDistributionChart"></canvas>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 justify-content-center mt-3 pt-2">
+                <span class="cat-badge cat-HEALTH">Health</span>
+                <span class="cat-badge cat-DAMAGE">Damage</span>
+                <span class="cat-badge cat-COMBAT">Combat</span>
+                <span class="cat-badge cat-PLAYER">Player</span>
+                <span class="cat-badge cat-CURRENCY">Currency</span>
+                <span class="cat-badge cat-INVENTORY">Inventory</span>
+                <span class="cat-badge cat-WEAPON">Weapon</span>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{% url 'category_dashboard' %}" class="btn-action-secondary py-1 px-3" style="font-size: 0.78rem;">
+                    <span>VIEW ALL 24 CATEGORIES // 全分類</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analysis Sessions (Desktop Table + Mobile Cards) -->
+<div class="glass-card mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <div class="card-title mb-0">
+                <i class="bi bi-folder-fill text-primary"></i>
+                <span>ANALYSIS TARGET SESSIONS // 解析セッション</span>
+            </div>
+            <div class="card-subtitle mb-0">Recent projects loaded and verified in your terminal.</div>
+        </div>
+        <a href="{% url 'project_list' %}" class="btn-action-secondary py-1 px-3" style="font-size: 0.78rem;">
+            <span>ALL SESSIONS ({{ stats.projects_count }})</span>
+        </a>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Platform</th>
+                        <th>Architecture</th>
+                        <th>Classes</th>
+                        <th>Offsets</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in recent_projects %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'project_detail' p.id %}" class="fw-bold text-white text-decoration-none font-mono">
+                                {{ p.name }}
+                            </a>
+                        </td>
+                        <td><span class="badge bg-dark border border-secondary">{{ p.platform }}</span></td>
+                        <td><span class="badge-address badge-field-offset" style="font-size: 0.7rem;">{{ p.architecture }}</span></td>
+                        <td class="font-mono text-white">{{ p.classes_count }}</td>
+                        <td class="font-mono text-warning">{{ p.field_offsets_count }}</td>
+                        <td>
+                            {% if p.status == 'COMPLETE' %}
+                                <span class="badge bg-success text-black font-mono fw-bold">COMPLETE</span>
+                            {% elif p.status == 'FAILED' %}
+                                <span class="badge bg-danger text-white font-mono fw-bold">FAILED</span>
+                            {% else %}
+                                <span class="badge bg-primary text-white font-mono fw-bold">{{ p.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-secondary font-mono">{{ p.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'project_detail' p.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.76rem;">
+                                <span>Inspect</span>
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-secondary font-mono">
+                            [ NO SESSIONS DETECTED ] &bull; <a href="{% url 'upload' %}" class="text-warning">UPLOAD FIRST TARGET</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view">
+        <div class="d-flex flex-column gap-2">
+            {% for p in recent_projects %}
+            <div class="mobile-entity-card">
+                <div class="mobile-card-target-tag">
+                    <i class="bi bi-crosshair"></i> TARGET SESSION #{{ p.id }}
+                </div>
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <a href="{% url 'project_detail' p.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
+                            {{ p.name }}
+                        </a>
+                        <div class="d-flex gap-1 mt-1">
+                            <span class="badge bg-dark border border-secondary" style="font-size: 0.65rem;">{{ p.platform }}</span>
+                            <span class="badge-address badge-field-offset" style="font-size: 0.65rem; padding: 1px 6px;">{{ p.architecture }}</span>
+                        </div>
+                    </div>
+                    {% if p.status == 'COMPLETE' %}
+                        <span class="badge bg-success text-black font-mono" style="font-size: 0.65rem;">NOMINAL</span>
+                    {% else %}
+                        <span class="badge bg-primary font-mono" style="font-size: 0.65rem;">{{ p.status }}</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                    <span class="font-mono text-secondary small">{{ p.classes_count }}c / {{ p.field_offsets_count }} offsets</span>
+                    <a href="{% url 'project_detail' p.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                        <span>Inspect</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4 text-secondary font-mono">[ NO SESSIONS DETECTED ]</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ctx = document.getElementById('categoryDistributionChart');
+    if (!ctx) return;
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Health', 'Damage', 'Combat', 'Currency', 'Inventory', 'Player', 'Other'],
+            datasets: [{
+                data: [35, 25, 20, 15, 12, 10, 8],
+                backgroundColor: [
+                    '#ff0055', /* Cyber Pink */
+                    '#ff6600', /* Orange */
+                    '#bd00ff', /* Purple */
+                    '#ffe600', /* Acid Yellow */
+                    '#00f0ff', /* Cyan */
+                    '#00ff88', /* Green */
+                    '#475569'  /* Dim */
+                ],
+                borderColor: '#000000',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            cutout: '68%'
+        }
+    });
+});
+</script>
+{% endblock %}

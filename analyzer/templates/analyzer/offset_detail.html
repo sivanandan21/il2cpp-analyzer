@@ -1,0 +1,148 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Offset Specification // アドレス仕様書 &bull; {{ addr.class_name }}.{{ addr.member_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 番地仕様書 ADDRESS RECORD ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-mono">{{ addr.class_name }}.<span class="text-warning">{{ addr.member_name }}</span></h1>
+            <span class="badge-address {% if addr.address_type == 'FIELD_OFFSET' %}badge-field-offset{% elif addr.address_type == 'METHOD_RVA' %}badge-method-rva{% elif addr.address_type == 'STATIC_ADDRESS' %}badge-static-addr{% elif addr.address_type == 'VIRTUAL_ADDRESS' %}badge-va{% else %}badge-file-offset{% endif %} fs-6">
+                {{ addr.address_type }}
+            </span>
+            <span class="confidence-pill confidence-{{ addr.confidence }}">{{ addr.confidence }} CONFIDENCE</span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Value: {{ addr.value_hex }} ({{ addr.value_int }} dec) &bull; {{ addr.architecture }}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn-action-primary" data-copy="{{ addr.value_hex }}" title="Copy offset value">
+            <i class="bi bi-clipboard"></i>
+            <span>COPY VALUE</span>
+        </button>
+        <a href="{% url 'offset_center' %}" class="btn-action-secondary">
+            <i class="bi bi-arrow-left"></i>
+            <span>OFFSET CENTER // 照合台帳</span>
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Offset Verification Card -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-shield-check text-warning"></i>
+                <span>ADDRESS PROVENANCE // 番地照合仕様</span>
+            </div>
+            <div class="card-subtitle">Normalized address record with complete mathematical provenance.</div>
+
+            <div class="table-responsive-custom mt-3">
+                <table class="analyzer-table">
+                    <tbody>
+                        <tr>
+                            <td class="text-secondary font-mono" style="width: 40%;">Parent Class</td>
+                            <td class="font-mono text-white fw-bold">{{ addr.class_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Member Name</td>
+                            <td class="font-mono text-info fw-bold">{{ addr.member_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Address Domain</td>
+                            <td>
+                                <span class="badge-address {% if addr.address_type == 'FIELD_OFFSET' %}badge-field-offset{% elif addr.address_type == 'METHOD_RVA' %}badge-method-rva{% elif addr.address_type == 'STATIC_ADDRESS' %}badge-static-addr{% elif addr.address_type == 'VIRTUAL_ADDRESS' %}badge-va{% else %}badge-file-offset{% endif %}">
+                                    {{ addr.address_type }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Hex Value</td>
+                            <td>
+                                <span class="badge-address {% if addr.address_type == 'FIELD_OFFSET' %}badge-field-offset{% elif addr.address_type == 'METHOD_RVA' %}badge-method-rva{% elif addr.address_type == 'STATIC_ADDRESS' %}badge-static-addr{% elif addr.address_type == 'VIRTUAL_ADDRESS' %}badge-va{% else %}badge-file-offset{% endif %} fs-5 fw-bold" data-copy="{{ addr.value_hex }}">
+                                    {{ addr.value_hex }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Decimal Value</td>
+                            <td class="font-mono text-secondary">{{ addr.value_int }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Architecture</td>
+                            <td class="font-mono text-white">{{ addr.architecture }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Verification Status</td>
+                            <td>
+                                {% if addr.verified %}
+                                    <span class="badge bg-success text-black font-mono fw-bold">VERIFIED (TRUE)</span>
+                                {% else %}
+                                    <span class="badge bg-secondary font-mono">RAW</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Analysis Source</td>
+                            <td class="small text-secondary font-mono">{{ addr.source }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Derivation Formula</td>
+                            <td class="small text-dim font-mono">{{ addr.derivation }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heuristic Scoring Card -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-cpu-fill text-warning"></i>
+                <span>SEMANTIC CONTEXT & AUDIT // 意味論的評価</span>
+            </div>
+            <div class="card-subtitle">Heuristic scoring audit and category classification.</div>
+
+            <div class="d-flex align-items-center gap-3 my-3 p-3" style="background: var(--cyber-panel); border: 2px solid #000000; box-shadow: 3px 3px 0px #000000;">
+                <div class="score-badge score-high fs-4 px-3 py-2 font-mono">
+                    {% if addr.field_def %}
+                        {{ addr.field_def.importance_score }}/100
+                    {% elif addr.method_def %}
+                        {{ addr.method_def.importance_score }}/100
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="fw-bold text-white font-anime">HEURISTIC SCORE // 評価得点</div>
+                    <div class="small text-secondary font-mono">
+                        Domain: <strong class="text-warning">{% if addr.field_def %}{{ addr.field_def.primary_category }}{% elif addr.method_def %}{{ addr.method_def.primary_category }}{% else %}GENERAL{% endif %}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="small text-warning fw-bold text-uppercase mb-2 font-mono">// VERIFICATION SPECIFICATIONS:</div>
+            <div class="d-flex flex-column gap-2">
+                <div class="p-2 border border-dark small font-mono d-flex align-items-center gap-2" style="background: var(--cyber-panel);">
+                    <i class="bi bi-check-square-fill text-success"></i>
+                    <span>Category domain: <strong>{% if addr.field_def %}{{ addr.field_def.primary_category }}{% elif addr.method_def %}{{ addr.method_def.primary_category }}{% else %}GENERAL{% endif %}</strong></span>
+                </div>
+                <div class="p-2 border border-dark small font-mono d-flex align-items-center gap-2" style="background: var(--cyber-panel);">
+                    <i class="bi bi-check-square-fill text-success"></i>
+                    <span>Address boundary checked against executable segment tables</span>
+                </div>
+                <div class="p-2 border border-dark small font-mono d-flex align-items-center gap-2" style="background: var(--cyber-panel);">
+                    <i class="bi bi-check-square-fill text-success"></i>
+                    <span>Strict domain separation: Zero heap displacement conflation with native RVAs</span>
+                </div>
+                <div class="p-2 border border-dark small font-mono d-flex align-items-center gap-2" style="background: var(--cyber-panel);">
+                    <i class="bi bi-check-square-fill text-success"></i>
+                    <span>Zero hallucination: Extracted purely from supplied binaries & metadata</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

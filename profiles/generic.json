@@ -1,0 +1,19 @@
+{
+  "name": "Generic IL2CPP",
+  "description": "Balanced keyword groups and semantic weights for universal IL2CPP game analysis.",
+  "weights": {
+    "keyword_match": 25,
+    "numeric_type": 20,
+    "class_relevance": 18,
+    "related_counterpart": 15,
+    "namespace_relevance": 10,
+    "ui_visual_penalty": -30
+  },
+  "categories": [
+    "COMBAT", "HEALTH", "DAMAGE", "ATTACK", "DEFENSE",
+    "SPEED", "CRITICAL", "ACCURACY", "CAPTURE", "CREATURE",
+    "PLAYER", "XP", "LEVEL", "CURRENCY", "INVENTORY",
+    "REWARDS", "ARENA", "ABILITIES", "EVOLUTION", "PROGRESSION",
+    "QUESTS", "STATS", "ENERGY", "COOLDOWN"
+  ]
+}

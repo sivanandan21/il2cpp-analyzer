@@ -1,0 +1,47 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Categories // 分類分析 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 意味論的分類 SEMANTIC CLASSIFICATION ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">GAMEPLAY CATEGORIES // 分類分析</h1>
+            <span class="badge-address badge-method-rva font-mono">{{ categories|length }} DOMAINS</span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">24 Analytical categories automatically classified by the semantic discovery engine.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'rule_list' %}" class="btn-action-secondary">
+            <i class="bi bi-sliders"></i>
+            <span>RULE EDITOR // ルール設定</span>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% for c in categories %}
+    <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+        <a href="{% url 'category_detail' c.name %}" class="text-decoration-none">
+            <div class="glass-card h-100 p-3" style="transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="cat-badge cat-{{ c.name }} fs-6 fw-bold">
+                        {{ c.name }}
+                    </span>
+                    <span class="font-mono fs-5 fw-bold text-white">
+                        {{ c.total }}
+                    </span>
+                </div>
+                
+                <div class="d-flex justify-content-between text-secondary small font-mono mt-3 pt-2 border-top border-secondary-subtle">
+                    <span><strong class="text-white">{{ c.classes_count }}</strong> classes</span>
+                    <span><strong class="text-warning">{{ c.fields_count }}</strong> fields</span>
+                    <span><strong class="text-info">{{ c.methods_count }}</strong> methods</span>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+{
+  "name": "RPG & Progression Profile",
+  "description": "Specialized profile prioritizing stats, progression, inventory, abilities, and experience.",
+  "weights": {
+    "keyword_match": 30,
+    "numeric_type": 20,
+    "class_relevance": 20,
+    "related_counterpart": 15,
+    "namespace_relevance": 10,
+    "ui_visual_penalty": -35
+  },
+  "priority_categories": [
+    "XP", "LEVEL", "STATS", "HEALTH", "INVENTORY", "ABILITIES", "PROGRESSION", "CURRENCY"
+  ]
+}

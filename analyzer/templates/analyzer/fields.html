@@ -1,0 +1,207 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Field Explorer // 変数構造探索 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ メンバー探索 MEMBER VARIABLES ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">FIELD EXPLORER // 変数構造探索</h1>
+            <span class="badge-address badge-field-offset font-mono">{{ page_obj.paginator.count }} FIELDS</span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Discover and inspect instance member variables and verified field displacements.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'offset_center' %}?tab=FIELD_OFFSET" class="btn-action-primary">
+            <i class="bi bi-compass-fill"></i>
+            <span>FIELD OFFSETS ONLY // 変位のみ</span>
+        </a>
+    </div>
+</div>
+
+<!-- Category Quick Pills Carousel -->
+<div class="pill-tabs-container mb-3">
+    <a href="{% url 'field_list' %}{% if current_q %}?q={{ current_q }}{% endif %}" class="pill-tab-item {% if not current_category or current_category == 'ALL' %}active{% endif %}">
+        ALL FIELDS // 全変数
+    </a>
+    {% for cat in categories %}
+    <a href="{% url 'field_list' %}?category={{ cat }}{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_category == cat %}active{% endif %}">
+        {{ cat }}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Filters Bar -->
+<div class="glass-card mb-4 p-3">
+    <form method="get" class="row g-2 align-items-center">
+        <div class="col-12 col-md-5">
+            <div class="input-group">
+                <span class="input-group-text bg-black border-2 border-dark text-warning"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control bg-dark text-white border-2 border-dark font-mono" placeholder="SEARCH FIELD NAME OR TYPE..." value="{{ current_q }}">
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <select name="category" class="form-select bg-dark text-white border-2 border-dark font-mono">
+                <option value="ALL">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat }}" {% if current_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <select name="has_offset" class="form-select bg-dark text-white border-2 border-dark font-mono">
+                <option value="">All Fields</option>
+                <option value="1" {% if has_offset == '1' %}selected{% endif %}>Verified Offsets Only</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-2">
+            <button type="submit" class="btn-action-primary flex-grow-1 justify-content-center">
+                <i class="bi bi-funnel"></i>
+                <span>FILTER</span>
+            </button>
+            <a href="{% url 'field_list' %}" class="btn-action-secondary px-3" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- Desktop Table View -->
+<div class="desktop-table-view">
+    <div class="glass-card p-0">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Parent Class</th>
+                        <th>Type</th>
+                        <th>Field Offset</th>
+                        <th>Storage</th>
+                        <th>Category</th>
+                        <th>Score</th>
+                        <th>Confidence</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'field_detail' f.id %}" class="fw-bold text-white text-decoration-none font-mono">
+                                {{ f.name }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'class_detail' f.class_def.id %}" class="text-secondary text-decoration-none small font-mono">
+                                {{ f.class_def.name }}
+                            </a>
+                        </td>
+                        <td class="font-mono text-dim small">{{ f.type_name }}</td>
+                        <td>
+                            {% if f.offset_hex %}
+                                <span class="badge-address badge-field-offset" data-copy="{{ f.offset_hex }}">{{ f.offset_hex }}</span>
+                            {% else %}
+                                <span class="small text-dim font-mono">UNRESOLVED</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if f.is_static %}
+                                <span class="badge-address badge-static-addr">STATIC</span>
+                            {% else %}
+                                <span class="small text-secondary font-mono">Instance</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="cat-badge cat-{{ f.primary_category }}">{{ f.primary_category }}</span></td>
+                        <td>
+                            <span class="score-badge {% if f.importance_score >= 70 %}score-high{% elif f.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                                {{ f.importance_score }}
+                            </span>
+                        </td>
+                        <td><span class="confidence-pill confidence-{{ f.confidence }}">{{ f.confidence }}</span></td>
+                        <td class="text-end">
+                            <a href="{% url 'field_detail' f.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.78rem;">Inspect</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-secondary font-mono">
+                            [ NO FIELDS MATCH FILTER SPECIFICATION ]
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Cards View -->
+<div class="mobile-cards-view">
+    <div class="d-flex flex-column gap-2">
+        {% for f in page_obj %}
+        <div class="mobile-entity-card">
+            <div class="mobile-card-target-tag">
+                <i class="bi bi-crosshair"></i> [ FIELD TARGET // 変数標的 ]
+            </div>
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                    <a href="{% url 'field_detail' f.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
+                        {{ f.name }}
+                    </a>
+                    <div class="text-secondary small mt-1 font-mono">
+                        Class: <a href="{% url 'class_detail' f.class_def.id %}" class="text-info text-decoration-none">{{ f.class_def.name }}</a>
+                    </div>
+                    <div class="font-mono text-dim small mt-1">{{ f.type_name }}</div>
+                </div>
+                <div class="d-flex flex-column align-items-end gap-1">
+                    <span class="score-badge {% if f.importance_score >= 70 %}score-high{% elif f.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                        {{ f.importance_score }}
+                    </span>
+                    <span class="cat-badge cat-{{ f.primary_category }}" style="font-size: 0.65rem;">{{ f.primary_category }}</span>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between text-secondary small pt-2 border-top border-secondary-subtle">
+                <div class="d-flex gap-2 align-items-center">
+                    {% if f.offset_hex %}
+                        <span class="badge-address badge-field-offset" data-copy="{{ f.offset_hex }}">{{ f.offset_hex }}</span>
+                    {% else %}
+                        <span class="small text-dim font-mono">UNRESOLVED</span>
+                    {% endif %}
+                    {% if f.is_static %}
+                        <span class="badge-address badge-static-addr">STATIC</span>
+                    {% endif %}
+                </div>
+                <a href="{% url 'field_detail' f.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                    <span>Inspect</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="glass-card text-center py-5 text-secondary font-mono">
+            [ NO FIELDS MATCH FILTER SPECIFICATION ]
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination pagination-sm gap-1">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page=1{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">&laquo; First</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.previous_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Prev</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link bg-black text-warning border-2 border-dark px-3 py-2 font-mono fw-bold">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.next_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Next</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.paginator.num_pages }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">Last &raquo;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endblock %}

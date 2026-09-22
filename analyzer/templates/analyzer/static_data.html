@@ -1,0 +1,123 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Static Data // 静的領域探索 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 静的領域探索 STATIC DATA ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">STATIC DATA EXPLORER // 静的領域探索</h1>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Discovered static fields and global variable storage locations verified from metadata tables.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'offset_center' %}" class="btn-action-secondary">
+            <i class="bi bi-arrow-left"></i>
+            <span>OFFSET CENTER // 照合台帳</span>
+        </a>
+    </div>
+</div>
+
+<div class="glass-card p-0">
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Parent Class</th>
+                        <th>Member Field</th>
+                        <th>Type</th>
+                        <th>Storage</th>
+                        <th>Address Value</th>
+                        <th>Source</th>
+                        <th>Confidence</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in page_obj %}
+                    <tr>
+                        <td class="font-mono text-white fw-bold">{{ a.class_name }}</td>
+                        <td class="font-mono text-info fw-bold">{{ a.member_name }}</td>
+                        <td class="font-mono text-dim small">
+                            {% if a.field_def %}{{ a.field_def.type_name }}{% else %}object{% endif %}
+                        </td>
+                        <td><span class="badge-address badge-static-addr">STATIC</span></td>
+                        <td>
+                            <span class="badge-address badge-static-addr fs-6" data-copy="{{ a.value_hex }}">
+                                {{ a.value_hex }}
+                            </span>
+                        </td>
+                        <td class="small text-secondary font-mono">{{ a.source }}</td>
+                        <td><span class="confidence-pill confidence-{{ a.confidence }}">{{ a.confidence }}</span></td>
+                        <td class="text-end">
+                            <a href="{% url 'offset_detail' a.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.78rem;">Inspect</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-secondary font-mono">
+                            [ NO STATIC DATA DETECTED WITH SUFFICIENT PROVENANCE IN SUPPLIED ARTIFACTS ]
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view p-3">
+        <div class="d-flex flex-column gap-2">
+            {% for a in page_obj %}
+            <div class="mobile-entity-card">
+                <div class="mobile-card-target-tag">
+                    <i class="bi bi-crosshair"></i> [ STATIC TARGET // 静的標的 ]
+                </div>
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="font-mono text-white fw-bold">{{ a.class_name }}</span>
+                        <div class="font-mono text-info small mt-1">{{ a.member_name }}</div>
+                        <div class="font-mono text-dim small mt-1">{% if a.field_def %}{{ a.field_def.type_name }}{% else %}object{% endif %}</div>
+                    </div>
+                    <span class="badge-address badge-static-addr fs-6" data-copy="{{ a.value_hex }}">
+                        {{ a.value_hex }}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                    <span class="confidence-pill confidence-{{ a.confidence }}">{{ a.confidence }}</span>
+                    <a href="{% url 'offset_detail' a.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                        <span>Inspect</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4 text-secondary font-mono">
+                [ NO STATIC DATA DETECTED ]
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-center p-3 border-top border-dark">
+        <nav>
+            <ul class="pagination pagination-sm gap-1">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page=1">&laquo; First</a></li>
+                    <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.previous_page_number }}">Prev</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link bg-black text-warning border-2 border-dark px-3 py-2 font-mono fw-bold">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                    <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

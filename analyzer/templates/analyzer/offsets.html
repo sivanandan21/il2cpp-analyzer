@@ -1,0 +1,241 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Offset Center // アドレス照合台帳 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 厳格分離 STRICT SEPARATION ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">OFFSET CENTER // アドレス照合台帳</h1>
+            <span class="badge-address badge-field-offset font-mono">{{ page_obj.paginator.count }} RECORDS</span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Verified memory displacements, relative virtual addresses, and file offsets.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'important_offsets' %}" class="btn-action-primary">
+            <i class="bi bi-star-fill text-dark"></i>
+            <span>RANKED CANDIDATES // 重要番地</span>
+        </a>
+    </div>
+</div>
+
+<!-- Touch-Swipeable Address Type Pill Tabs Carousel -->
+<div class="pill-tabs-container mb-3">
+    <a href="{% url 'offset_center' %}{% if current_q %}?q={{ current_q }}{% endif %}" class="pill-tab-item {% if not current_tab %}active{% endif %}">
+        ALL DOMAINS // 全番地
+    </a>
+    <a href="{% url 'offset_center' %}?tab=FIELD_OFFSET{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'FIELD_OFFSET' %}active{% endif %}">
+        <span class="badge-address badge-field-offset" style="padding: 1px 5px; font-size: 0.68rem;">FIELD</span> HEAP OFFSET
+    </a>
+    <a href="{% url 'offset_center' %}?tab=METHOD_RVA{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'METHOD_RVA' %}active{% endif %}">
+        <span class="badge-address badge-method-rva" style="padding: 1px 5px; font-size: 0.68rem;">RVA</span> CODE POINTER
+    </a>
+    <a href="{% url 'offset_center' %}?tab=STATIC_ADDRESS{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'STATIC_ADDRESS' %}active{% endif %}">
+        <span class="badge-address badge-static-addr" style="padding: 1px 5px; font-size: 0.68rem;">STATIC</span> GLOBAL ADDR
+    </a>
+    <a href="{% url 'offset_center' %}?tab=VIRTUAL_ADDRESS{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'VIRTUAL_ADDRESS' %}active{% endif %}">
+        <span class="badge-address badge-va" style="padding: 1px 5px; font-size: 0.68rem;">VA</span> RUNTIME ADDR
+    </a>
+    <a href="{% url 'offset_center' %}?tab=FILE_OFFSET{% if current_q %}&q={{ current_q }}{% endif %}" class="pill-tab-item {% if current_tab == 'FILE_OFFSET' %}active{% endif %}">
+        <span class="badge-address badge-file-offset" style="padding: 1px 5px; font-size: 0.68rem;">FILE</span> BINARY DISK
+    </a>
+</div>
+
+<!-- Search & Filters Bar -->
+<div class="glass-card mb-4 p-3">
+    <form method="get" class="row g-2 align-items-center">
+        <div class="col-12 col-md-5">
+            <div class="input-group">
+                <span class="input-group-text bg-black border-2 border-dark text-warning"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control bg-dark text-white border-2 border-dark font-mono" placeholder="SEARCH CLASS, MEMBER OR 0x..." value="{{ current_q }}">
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <select name="tab" class="form-select bg-dark text-white border-2 border-dark font-mono">
+                <option value="">All Address Types</option>
+                <option value="FIELD_OFFSET" {% if current_tab == 'FIELD_OFFSET' %}selected{% endif %}>FIELD_OFFSET (Heap)</option>
+                <option value="METHOD_RVA" {% if current_tab == 'METHOD_RVA' %}selected{% endif %}>METHOD_RVA (Code)</option>
+                <option value="STATIC_ADDRESS" {% if current_tab == 'STATIC_ADDRESS' %}selected{% endif %}>STATIC_ADDRESS (Global)</option>
+                <option value="VIRTUAL_ADDRESS" {% if current_tab == 'VIRTUAL_ADDRESS' %}selected{% endif %}>VIRTUAL_ADDRESS (VA)</option>
+                <option value="FILE_OFFSET" {% if current_tab == 'FILE_OFFSET' %}selected{% endif %}>FILE_OFFSET (Disk)</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <select name="sort" class="form-select bg-dark text-white border-2 border-dark font-mono">
+                <option value="class_name" {% if current_sort == 'class_name' %}selected{% endif %}>Class Name</option>
+                <option value="value_int" {% if current_sort == 'value_int' %}selected{% endif %}>Value (Asc)</option>
+                <option value="-value_int" {% if current_sort == '-value_int' %}selected{% endif %}>Value (Desc)</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-2">
+            <button type="submit" class="btn-action-primary flex-grow-1 justify-content-center">
+                <i class="bi bi-crosshair"></i>
+                <span>SCAN</span>
+            </button>
+            <a href="{% url 'offset_center' %}" class="btn-action-secondary px-3" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- Desktop Table View -->
+<div class="desktop-table-view">
+    <div class="glass-card p-0">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Class Target</th>
+                        <th>Member Name</th>
+                        <th>Address Domain</th>
+                        <th>Hex Value</th>
+                        <th>Dec Value</th>
+                        <th>Status</th>
+                        <th>Confidence</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in page_obj %}
+                    <tr>
+                        <td class="font-mono text-white fw-bold">
+                            {% if a.class_def %}
+                                <a href="{% url 'class_detail' a.class_def.id %}" class="text-white text-decoration-none">
+                                    {{ a.class_name }}
+                                </a>
+                            {% else %}
+                                {{ a.class_name }}
+                            {% endif %}
+                        </td>
+                        <td class="font-mono text-info fw-bold">
+                            {% if a.field_def %}
+                                <a href="{% url 'field_detail' a.field_def.id %}" class="text-info text-decoration-none">{{ a.member_name }}</a>
+                            {% elif a.method_def %}
+                                <a href="{% url 'method_detail' a.method_def.id %}" class="text-warning text-decoration-none">{{ a.member_name }}</a>
+                            {% else %}
+                                {{ a.member_name }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if a.address_type == 'FIELD_OFFSET' %}
+                                <span class="badge-address badge-field-offset">FIELD_OFFSET</span>
+                            {% elif a.address_type == 'METHOD_RVA' %}
+                                <span class="badge-address badge-method-rva">METHOD_RVA</span>
+                            {% elif a.address_type == 'STATIC_ADDRESS' %}
+                                <span class="badge-address badge-static-addr">STATIC_ADDR</span>
+                            {% elif a.address_type == 'VIRTUAL_ADDRESS' %}
+                                <span class="badge-address badge-va">VIRTUAL_ADDR</span>
+                            {% else %}
+                                <span class="badge-address badge-file-offset">FILE_OFFSET</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if a.address_type == 'FIELD_OFFSET' %}
+                                <span class="badge-address badge-field-offset fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                            {% elif a.address_type == 'METHOD_RVA' %}
+                                <span class="badge-address badge-method-rva fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                            {% elif a.address_type == 'STATIC_ADDRESS' %}
+                                <span class="badge-address badge-static-addr fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                            {% elif a.address_type == 'VIRTUAL_ADDRESS' %}
+                                <span class="badge-address badge-va fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                            {% else %}
+                                <span class="badge-address badge-file-offset fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="font-mono text-secondary small">{{ a.value_int }}</td>
+                        <td>
+                            {% if a.verified %}
+                                <span class="badge bg-success text-black font-mono fw-bold">VERIFIED</span>
+                            {% else %}
+                                <span class="badge bg-secondary font-mono">RAW</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="confidence-pill confidence-{{ a.confidence }}">{{ a.confidence }}</span></td>
+                        <td class="text-end">
+                            <a href="{% url 'offset_detail' a.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.78rem;">
+                                <span>Inspect</span>
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-secondary font-mono">
+                            [ NO ADDRESS RECORDS MATCH SPECIFIED CRITERIA ]
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Cards View -->
+<div class="mobile-cards-view">
+    <div class="d-flex flex-column gap-2">
+        {% for a in page_obj %}
+        <div class="mobile-entity-card">
+            <div class="mobile-card-target-tag">
+                <i class="bi bi-crosshair"></i> [ {{ a.address_type }} // 標的 ]
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                    <div class="fw-bold text-white font-mono fs-6">{{ a.class_name }}</div>
+                    <div class="font-mono text-info fw-bold small mt-1">{{ a.member_name }}</div>
+                </div>
+                
+                {% if a.address_type == 'FIELD_OFFSET' %}
+                    <span class="badge-address badge-field-offset fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                {% elif a.address_type == 'METHOD_RVA' %}
+                    <span class="badge-address badge-method-rva fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                {% elif a.address_type == 'STATIC_ADDRESS' %}
+                    <span class="badge-address badge-static-addr fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                {% elif a.address_type == 'VIRTUAL_ADDRESS' %}
+                    <span class="badge-address badge-va fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                {% else %}
+                    <span class="badge-address badge-file-offset fs-6" data-copy="{{ a.value_hex }}">{{ a.value_hex }}</span>
+                {% endif %}
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between text-secondary small pt-2 border-top border-secondary-subtle">
+                <div class="d-flex gap-2 align-items-center font-mono">
+                    <span>Dec: {{ a.value_int }}</span>
+                    {% if a.verified %}
+                        <span class="badge bg-success text-black" style="font-size: 0.65rem;">VERIFIED</span>
+                    {% endif %}
+                </div>
+                <a href="{% url 'offset_detail' a.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                    <span>Inspect</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="glass-card text-center py-5 text-secondary font-mono">
+            [ NO ADDRESS RECORDS MATCH SPECIFIED CRITERIA ]
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+    <nav>
+        <ul class="pagination pagination-sm gap-1">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page=1{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">&laquo; First</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.previous_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Prev</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link bg-black text-warning border-2 border-dark px-3 py-2 font-mono fw-bold">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.next_page_number }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Next</a></li>
+                <li class="page-item"><a class="page-link bg-dark text-white border-2 border-dark px-3 py-2 font-mono" href="?page={{ page_obj.paginator.num_pages }}{% if current_q %}&q={{ current_q }}{% endif %}{% if current_tab %}&tab={{ current_tab }}{% endif %}">Last &raquo;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endblock %}

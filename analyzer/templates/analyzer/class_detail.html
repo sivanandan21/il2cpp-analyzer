@@ -1,0 +1,304 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}{{ class_obj.name }} // 型詳細 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<!-- Top Header & Navigation -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 型仕様書 CLASS DOSSIER ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-mono">{{ class_obj.name }}</h1>
+            <span class="cat-badge cat-{{ class_obj.primary_category }}">{{ class_obj.primary_category }}</span>
+            <span class="confidence-pill confidence-{{ class_obj.confidence }}">{{ class_obj.confidence }} CONFIDENCE</span>
+            <span class="score-badge {% if class_obj.importance_score >= 70 %}score-high{% elif class_obj.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                SCORE {{ class_obj.importance_score }}
+            </span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono text-break">{{ class_obj.full_name }}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn-action-secondary" data-copy="{{ class_obj.full_name }}" title="Copy full type name">
+            <i class="bi bi-clipboard"></i>
+            <span>COPY NAME</span>
+        </button>
+        <a href="{% url 'class_list' %}" class="btn-action-secondary">
+            <i class="bi bi-arrow-left"></i>
+            <span>CLASSES // 一覧</span>
+        </a>
+    </div>
+</div>
+
+<!-- Overview Telemetry Grid -->
+<div class="metrics-grid mb-4">
+    <div class="metric-card">
+        <div class="metric-top-label">NAMESPACE // 空間</div>
+        <div class="fw-bold text-white font-mono small text-truncate mt-1">{{ class_obj.namespace|default:"<Global>" }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-top-label">ASSEMBLY // モジュール</div>
+        <div class="fw-bold text-white font-mono small text-truncate mt-1">{{ class_obj.assembly.name|default:"Assembly-CSharp.dll" }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-top-label">BASE TYPE // 基底型</div>
+        <div class="fw-bold text-info font-mono small text-truncate mt-1">{{ class_obj.base_class_name|default:"System.Object" }}</div>
+    </div>
+    <div class="metric-card yellow-accent">
+        <div class="metric-top-label">MEMBERS // 構成員</div>
+        <div class="fw-bold text-warning font-mono mt-1">{{ fields|length }} fields &bull; {{ methods|length }} methods</div>
+    </div>
+</div>
+
+<!-- Section Tabs -->
+<div class="pill-tabs-container mb-3" id="classDetailTabs">
+    <button type="button" class="pill-tab-item active" onclick="switchClassTab('fieldsTab', this)">
+        <i class="bi bi-hash"></i> FIELDS // 変数 ({{ fields|length }})
+    </button>
+    <button type="button" class="pill-tab-item" onclick="switchClassTab('methodsTab', this)">
+        <i class="bi bi-braces"></i> METHODS // 関数 ({{ methods|length }})
+    </button>
+</div>
+
+<!-- Fields Tab Content -->
+<div id="fieldsTabContent">
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="glass-card mb-4 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-hash text-warning"></i>
+                    <span>DECLARED FIELDS // 宣言メンバー変数 ({{ fields|length }})</span>
+                </div>
+                <div class="card-subtitle mb-0">Member variables and verified instance memory displacements.</div>
+            </div>
+
+            <div class="table-responsive-custom">
+                <table class="analyzer-table">
+                    <thead>
+                        <tr>
+                            <th>Field Name</th>
+                            <th>Type</th>
+                            <th>Field Offset</th>
+                            <th>Storage</th>
+                            <th>Category</th>
+                            <th>Score</th>
+                            <th>Confidence</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fields %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'field_detail' f.id %}" class="fw-bold text-white text-decoration-none font-mono">
+                                    {{ f.name }}
+                                </a>
+                            </td>
+                            <td class="font-mono text-secondary small">{{ f.type_name }}</td>
+                            <td>
+                                {% if f.offset_hex %}
+                                    <span class="badge-address badge-field-offset" data-copy="{{ f.offset_hex }}">{{ f.offset_hex }}</span>
+                                {% else %}
+                                    <span class="small text-dim font-mono">UNRESOLVED</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if f.is_static %}
+                                    <span class="badge-address badge-static-addr">STATIC</span>
+                                {% else %}
+                                    <span class="small text-secondary font-mono">Instance</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="cat-badge cat-{{ f.primary_category }}">{{ f.primary_category }}</span></td>
+                            <td>
+                                <span class="score-badge {% if f.importance_score >= 70 %}score-high{% elif f.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                                    {{ f.importance_score }}
+                                </span>
+                            </td>
+                            <td><span class="confidence-pill confidence-{{ f.confidence }}">{{ f.confidence }}</span></td>
+                            <td class="text-end">
+                                <a href="{% url 'field_detail' f.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.78rem;">Inspect</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-secondary font-mono">[ NO FIELDS DECLARED ]</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view mb-4">
+        <div class="d-flex flex-column gap-2">
+            {% for f in fields %}
+            <div class="mobile-entity-card">
+                <div class="mobile-card-target-tag">
+                    <i class="bi bi-crosshair"></i> [ FIELD TARGET // 変数 ]
+                </div>
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <a href="{% url 'field_detail' f.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
+                            {{ f.name }}
+                        </a>
+                        <div class="font-mono text-dim small mt-1">{{ f.type_name }}</div>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-1">
+                        <span class="score-badge {% if f.importance_score >= 70 %}score-high{% elif f.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                            {{ f.importance_score }}
+                        </span>
+                        <span class="cat-badge cat-{{ f.primary_category }}" style="font-size: 0.65rem;">{{ f.primary_category }}</span>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between text-secondary small pt-2 border-top border-secondary-subtle">
+                    <div class="d-flex gap-2 align-items-center">
+                        {% if f.offset_hex %}
+                            <span class="badge-address badge-field-offset" data-copy="{{ f.offset_hex }}">{{ f.offset_hex }}</span>
+                        {% else %}
+                            <span class="small text-dim font-mono">UNRESOLVED</span>
+                        {% endif %}
+                        {% if f.is_static %}
+                            <span class="badge-address badge-static-addr">STATIC</span>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'field_detail' f.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                        <span>Inspect</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="glass-card text-center py-4 text-secondary font-mono">[ NO FIELDS DECLARED ]</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Methods Tab Content -->
+<div id="methodsTabContent" style="display: none;">
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="glass-card mb-4 p-0">
+            <div class="p-3 border-bottom border-dark">
+                <div class="card-title mb-0">
+                    <i class="bi bi-braces text-info"></i>
+                    <span>DECLARED METHODS // 宣言関数 ({{ methods|length }})</span>
+                </div>
+                <div class="card-subtitle mb-0">Member functions, native code RVAs, and signatures.</div>
+            </div>
+
+            <div class="table-responsive-custom">
+                <table class="analyzer-table">
+                    <thead>
+                        <tr>
+                            <th>Method Name</th>
+                            <th>Signature</th>
+                            <th>Method RVA</th>
+                            <th>Category</th>
+                            <th>Score</th>
+                            <th>Confidence</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in methods %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'method_detail' m.id %}" class="fw-bold text-white text-decoration-none font-mono">
+                                    {{ m.name }}
+                                </a>
+                                {% if m.is_static %}<span class="badge bg-dark border border-secondary text-secondary ms-1 font-mono" style="font-size: 0.65rem;">STATIC</span>{% endif %}
+                            </td>
+                            <td class="font-mono text-secondary small text-break">{{ m.signature }}</td>
+                            <td>
+                                {% if m.rva_hex %}
+                                    <span class="badge-address badge-method-rva" data-copy="{{ m.rva_hex }}">{{ m.rva_hex }}</span>
+                                {% else %}
+                                    <span class="small text-dim font-mono">UNRESOLVED</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="cat-badge cat-{{ m.primary_category }}">{{ m.primary_category }}</span></td>
+                            <td>
+                                <span class="score-badge {% if m.importance_score >= 70 %}score-high{% elif m.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                                    {{ m.importance_score }}
+                                </span>
+                            </td>
+                            <td><span class="confidence-pill confidence-{{ m.confidence }}">{{ m.confidence }}</span></td>
+                            <td class="text-end">
+                                <a href="{% url 'method_detail' m.id %}" class="btn-action-secondary py-1 px-2" style="font-size: 0.78rem;">Inspect</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-secondary font-mono">[ NO METHODS DECLARED ]</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view mb-4">
+        <div class="d-flex flex-column gap-2">
+            {% for m in methods %}
+            <div class="mobile-entity-card">
+                <div class="mobile-card-target-tag">
+                    <i class="bi bi-crosshair"></i> [ METHOD TARGET // 関数 ]
+                </div>
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <a href="{% url 'method_detail' m.id %}" class="fw-bold text-white text-decoration-none font-mono fs-6">
+                            {{ m.name }}
+                        </a>
+                        {% if m.is_static %}<span class="badge bg-dark border border-secondary text-secondary ms-1 font-mono" style="font-size: 0.62rem;">STATIC</span>{% endif %}
+                        <div class="font-mono text-dim small mt-1 text-break">{{ m.signature }}</div>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-1">
+                        <span class="score-badge {% if m.importance_score >= 70 %}score-high{% elif m.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                            {{ m.importance_score }}
+                        </span>
+                        <span class="cat-badge cat-{{ m.primary_category }}" style="font-size: 0.65rem;">{{ m.primary_category }}</span>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between text-secondary small pt-2 border-top border-secondary-subtle">
+                    <div>
+                        {% if m.rva_hex %}
+                            <span class="badge-address badge-method-rva" data-copy="{{ m.rva_hex }}">{{ m.rva_hex }}</span>
+                        {% else %}
+                            <span class="small text-dim font-mono">UNRESOLVED</span>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'method_detail' m.id %}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;">
+                        <span>Inspect</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="glass-card text-center py-4 text-secondary font-mono">[ NO METHODS DECLARED ]</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function switchClassTab(tabId, el) {
+    document.querySelectorAll('#classDetailTabs .pill-tab-item').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    if (tabId === 'fieldsTab') {
+        document.getElementById('fieldsTabContent').style.display = 'block';
+        document.getElementById('methodsTabContent').style.display = 'none';
+    } else {
+        document.getElementById('fieldsTabContent').style.display = 'none';
+        document.getElementById('methodsTabContent').style.display = 'block';
+    }
+}
+</script>
+{% endblock %}

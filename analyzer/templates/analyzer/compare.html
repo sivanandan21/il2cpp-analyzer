@@ -1,0 +1,186 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Compare Builds // ビルド差分比較 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 差分解析 DIFF ENGINE ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">PROJECT BUILD COMPARISON // ビルド差分比較</h1>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Detect added/removed classes, changed field offsets, and relocated method RVAs across two builds.</p>
+    </div>
+</div>
+
+<div class="glass-card mb-4 p-3">
+    <form method="get" class="row g-3 align-items-end font-mono">
+        <div class="col-12 col-md-5">
+            <label class="form-label text-white small fw-bold">// BASE BUILD (TARGET A)</label>
+            {{ form.project_a }}
+        </div>
+        <div class="col-12 col-md-5">
+            <label class="form-label text-white small fw-bold">// TARGET BUILD (TARGET B)</label>
+            {{ form.project_b }}
+        </div>
+        <div class="col-12 col-md-2">
+            <button type="submit" class="btn-action-primary w-100 justify-content-center py-2">
+                <i class="bi bi-arrow-left-right"></i>
+                <span>COMPARE // 比較</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if diff %}
+<!-- Comparison Metrics Grid -->
+<div class="metrics-grid mb-4">
+    <div class="metric-card">
+        <div class="metric-top-label">ADDED CLASSES // 新規</div>
+        <div class="metric-value text-success">+{{ diff.added_classes|length }}</div>
+    </div>
+    <div class="metric-card pink-accent">
+        <div class="metric-top-label">REMOVED CLASSES // 削除</div>
+        <div class="metric-value" style="color: var(--cyber-pink);">-{{ diff.removed_classes|length }}</div>
+    </div>
+    <div class="metric-card yellow-accent">
+        <div class="metric-top-label">OFFSET SHIFTS // 変位差分</div>
+        <div class="metric-value text-warning">{{ diff.changed_offsets|length }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-top-label">RVA RELOCATIONS // 仮想番地移動</div>
+        <div class="metric-value text-info">{{ diff.changed_rvas|length }}</div>
+    </div>
+</div>
+
+<!-- Changed Field Offsets -->
+<div class="glass-card mb-4 p-0">
+    <div class="p-3 border-bottom border-dark">
+        <div class="card-title mb-0">
+            <i class="bi bi-hash text-warning"></i>
+            <span>FIELD OFFSET DISPLACEMENTS // 変数変位差分 ({{ diff.changed_offsets|length }})</span>
+        </div>
+        <div class="card-subtitle mb-0 font-mono">Instance memory layout shifts between the two builds.</div>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Field</th>
+                        <th>Build A (Base)</th>
+                        <th>Build B (Target)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in diff.changed_offsets %}
+                    <tr>
+                        <td class="font-mono text-white fw-bold">{{ o.class }}</td>
+                        <td class="font-mono text-info">{{ o.field }}</td>
+                        <td><span class="badge-address badge-field-offset" data-copy="{{ o.old_offset }}">{{ o.old_offset }}</span></td>
+                        <td><span class="badge-address badge-field-offset" style="background: var(--cyber-pink); color: #fff;" data-copy="{{ o.new_offset }}">{{ o.new_offset }}</span></td>
+                        <td><span class="badge bg-warning text-black font-mono fw-bold">SHIFTED</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4 text-secondary font-mono">[ NO FIELD OFFSET DIFFERENCES DETECTED ]</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view p-3">
+        <div class="d-flex flex-column gap-2">
+            {% for o in diff.changed_offsets %}
+            <div class="mobile-entity-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="fw-bold text-white font-mono">{{ o.class }}</div>
+                        <div class="font-mono text-info small mt-1">{{ o.field }}</div>
+                    </div>
+                    <span class="badge bg-warning text-black font-mono">SHIFTED</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                    <span class="small text-secondary font-mono">A: <span class="badge-address badge-field-offset" data-copy="{{ o.old_offset }}">{{ o.old_offset }}</span></span>
+                    <i class="bi bi-arrow-right text-warning"></i>
+                    <span class="small text-secondary font-mono">B: <span class="badge-address badge-field-offset" style="background: var(--cyber-pink); color: #fff;" data-copy="{{ o.new_offset }}">{{ o.new_offset }}</span></span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-3 text-secondary font-mono">[ NO FIELD OFFSET DIFFERENCES ]</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Changed Method RVAs -->
+<div class="glass-card mb-4 p-0">
+    <div class="p-3 border-bottom border-dark">
+        <div class="card-title mb-0">
+            <i class="bi bi-braces text-info"></i>
+            <span>METHOD RVA RELOCATIONS // 関数仮想番地移動 ({{ diff.changed_rvas|length }})</span>
+        </div>
+        <div class="card-subtitle mb-0 font-mono">Native function pointer movements in compiled binaries.</div>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+        <div class="table-responsive-custom">
+            <table class="analyzer-table">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Method</th>
+                        <th>Build A (Base)</th>
+                        <th>Build B (Target)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in diff.changed_rvas %}
+                    <tr>
+                        <td class="font-mono text-white fw-bold">{{ r.class }}</td>
+                        <td class="font-mono text-warning">{{ r.method }}</td>
+                        <td><span class="badge-address badge-method-rva" data-copy="{{ r.old_rva }}">{{ r.old_rva }}</span></td>
+                        <td><span class="badge-address badge-method-rva" style="background: var(--cyber-purple); color: #fff;" data-copy="{{ r.new_rva }}">{{ r.new_rva }}</span></td>
+                        <td><span class="badge bg-info text-black font-mono fw-bold">RELOCATED</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4 text-secondary font-mono">[ NO METHOD RVA RELOCATIONS DETECTED ]</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view p-3">
+        <div class="d-flex flex-column gap-2">
+            {% for r in diff.changed_rvas %}
+            <div class="mobile-entity-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="fw-bold text-white font-mono">{{ r.class }}</div>
+                        <div class="font-mono text-warning small mt-1">{{ r.method }}</div>
+                    </div>
+                    <span class="badge bg-info text-black font-mono">RELOCATED</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
+                    <span class="small text-secondary font-mono">A: <span class="badge-address badge-method-rva" data-copy="{{ r.old_rva }}">{{ r.old_rva }}</span></span>
+                    <i class="bi bi-arrow-right text-info"></i>
+                    <span class="small text-secondary font-mono">B: <span class="badge-address badge-method-rva" style="background: var(--cyber-purple); color: #fff;" data-copy="{{ r.new_rva }}">{{ r.new_rva }}</span></span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-3 text-secondary font-mono">[ NO METHOD RVA RELOCATIONS ]</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

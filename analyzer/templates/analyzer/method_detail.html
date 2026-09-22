@@ -1,0 +1,153 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}{{ method_obj.class_def.name }}.{{ method_obj.name }} // 関数仕様書 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 関数仕様書 METHOD SPECIFICATION ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-mono">{{ method_obj.class_def.name }}.<span class="text-cyan" style="color: var(--cyber-cyan);">{{ method_obj.name }}</span></h1>
+            <span class="cat-badge cat-{{ method_obj.primary_category }}">{{ method_obj.primary_category }}</span>
+            <span class="confidence-pill confidence-{{ method_obj.confidence }}">{{ method_obj.confidence }} CONFIDENCE</span>
+            <span class="score-badge {% if method_obj.importance_score >= 70 %}score-high{% elif method_obj.importance_score >= 40 %}score-med{% else %}score-low{% endif %}">
+                SCORE {{ method_obj.importance_score }}
+            </span>
+        </div>
+        <p class="text-secondary small mb-0 font-mono text-break">{{ method_obj.signature }}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn-action-secondary" data-copy="{{ method_obj.signature }}" title="Copy signature">
+            <i class="bi bi-clipboard"></i>
+            <span>COPY SIGNATURE</span>
+        </button>
+        <a href="{% url 'class_detail' method_obj.class_def.id %}" class="btn-action-secondary">
+            <i class="bi bi-box-arrow-in-left"></i>
+            <span>PARENT CLASS // 親型</span>
+        </a>
+        <a href="{% url 'method_list' %}" class="btn-action-secondary">
+            <i class="bi bi-arrow-left"></i>
+            <span>ALL METHODS // 全関数</span>
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Native Address Separation Panel -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-geo-alt-fill text-info"></i>
+                <span>NATIVE ADDRESS SEPARATION // 番地完全分離</span>
+            </div>
+            <div class="card-subtitle">
+                Explicit separation: <code>Method RVA &ne; Virtual Address &ne; File Offset</code>.
+            </div>
+
+            <div class="table-responsive-custom mt-3">
+                <table class="analyzer-table">
+                    <tbody>
+                        <tr>
+                            <td class="text-secondary font-mono" style="width: 40%;">Method RVA</td>
+                            <td>
+                                {% if method_obj.rva_hex %}
+                                    <span class="badge-address badge-method-rva fs-6" data-copy="{{ method_obj.rva_hex }}">
+                                        {{ method_obj.rva_hex }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-dim font-mono">UNRESOLVED</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Virtual Address (VA)</td>
+                            <td>
+                                {% if method_obj.va_hex %}
+                                    <span class="badge-address badge-va fs-6" data-copy="{{ method_obj.va_hex }}">
+                                        {{ method_obj.va_hex }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-dim font-mono">UNRESOLVED</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Physical File Offset</td>
+                            <td>
+                                {% if method_obj.file_offset_hex %}
+                                    <span class="badge-address badge-file-offset fs-6" data-copy="{{ method_obj.file_offset_hex }}">
+                                        {{ method_obj.file_offset_hex }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-dim font-mono">UNRESOLVED</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Return Type</td>
+                            <td class="font-mono text-white">{{ method_obj.return_type }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Architecture</td>
+                            <td class="font-mono text-white">{{ method_obj.class_def.project.architecture }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-secondary font-mono">Verification Source</td>
+                            <td class="small text-secondary font-mono">
+                                {% if address_record %}
+                                    {{ address_record.source }}
+                                {% else %}
+                                    Metadata Declaration Table
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-dark border-2 border-dark mt-3 mb-0 small text-secondary font-mono" style="background: var(--cyber-panel);">
+                <i class="bi bi-shield-check text-success me-1"></i>
+                Address values verified strictly from ELF / PE headers and method pointer tables.
+            </div>
+        </div>
+    </div>
+
+    <!-- Parameters & Attributes -->
+    <div class="col-12 col-lg-6">
+        <div class="glass-card h-100">
+            <div class="card-title">
+                <i class="bi bi-list-nested text-warning"></i>
+                <span>PARAMETERS // 引数リスト ({{ parameters|length }})</span>
+            </div>
+            <div class="card-subtitle">Method arguments extracted from metadata signature.</div>
+
+            <div class="table-responsive-custom mt-3">
+                <table class="analyzer-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Default</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in parameters %}
+                        <tr>
+                            <td class="font-mono text-secondary">{{ p.position }}</td>
+                            <td class="font-mono text-white fw-bold">{{ p.name }}</td>
+                            <td class="font-mono text-info">{{ p.type_name }}</td>
+                            <td class="font-mono text-dim small">{{ p.default_value|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-secondary font-mono">[ VOID / PARAMETERLESS METHOD ]</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

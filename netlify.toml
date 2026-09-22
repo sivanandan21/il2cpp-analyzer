@@ -1,0 +1,20 @@
+# Netlify Configuration for IL2CPP Analyzer
+#
+# IMPORTANT ARCHITECTURAL NOTE:
+# Full-stack Python Django applications require a persistent WSGI server (Gunicorn),
+# writable database storage (SQLite / Postgres), and binary upload streaming (up to 512MB).
+# Netlify is an Edge CDN / Serverless platform with a 6MB upload limit and a 10s timeout.
+#
+# RECOMMENDED ARCHITECTURE:
+# 1. Deploy Django to Render (render.com) or Railway (railway.app) using the included Procfile / render.yaml.
+# 2. If you have a custom domain on Netlify, use this reverse proxy rule to route requests seamlessly:
+
+[build]
+  publish = "staticfiles"
+
+# Optional reverse-proxy to your deployed backend:
+# [[redirects]]
+#   from = "/*"
+#   to = "https://YOUR_RENDER_APP_NAME.onrender.com/:splat"
+#   status = 200
+#   force = true

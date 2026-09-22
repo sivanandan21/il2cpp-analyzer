@@ -1,0 +1,82 @@
+{% extends 'analyzer/base.html' %}
+
+{% block title %}Dump Viewer // 逆コンパイル閲覧 &bull; IL2CPP Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="anime-tag">[ 復元コード DUMP INSPECTOR ]</span>
+            <h1 class="h3 fw-bold text-white mb-0 font-anime">C# DUMP VIEWER // 逆コンパイル閲覧</h1>
+        </div>
+        <p class="text-secondary small mb-0 font-mono">Read-only code explorer for reconstructed IL2CPP definitions.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'class_list' %}" class="btn-action-secondary">
+            <i class="bi bi-boxes"></i>
+            <span>CLASSES // 型一覧</span>
+        </a>
+    </div>
+</div>
+
+<div class="glass-card p-0" style="background: #06080e; border: 2px solid #000000; box-shadow: 5px 5px 0px #000000; overflow: hidden;">
+    <!-- Code toolbar -->
+    <div class="p-2 px-3 border-bottom border-dark d-flex justify-content-between align-items-center bg-black flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2 font-mono">
+            <i class="bi bi-file-earmark-code text-warning"></i>
+            <span class="text-white small fw-bold">dump.cs</span>
+            <span class="badge bg-black text-warning border border-warning" style="font-size: 0.65rem;">READ-ONLY // 読取専用</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <input type="text" id="dumpSearchInput" class="form-control form-control-sm bg-dark text-white border-2 border-dark font-mono" placeholder="FILTER LINES // 検索..." style="width: 200px; font-size: 0.78rem;">
+            <span class="small text-secondary font-mono d-none d-sm-inline">{{ code_lines|length }} lines</span>
+        </div>
+    </div>
+
+    <!-- Code Display -->
+    <div style="max-height: 720px; overflow: auto; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.6;" id="dumpTableWrapper">
+        <table style="width: 100%; border-collapse: collapse;" id="dumpCodeTable">
+            <tbody>
+                {% for num, line in code_lines %}
+                <tr class="dump-code-row" style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                    <td style="width: 58px; min-width: 58px; padding: 2px 10px; text-align: right; color: var(--cyber-dim); user-select: none; background: #05060a; border-right: 1px solid #1a1f2e;">
+                        {{ num }}
+                    </td>
+                    <td class="dump-line-text" style="padding: 2px 14px; white-space: pre; color: #cbd5e1; word-break: break-all;">
+                        {% if "//" in line %}
+                            <span style="color: #64748b;">{{ line }}</span>
+                        {% elif "class " in line or "struct " in line or "interface " in line or "enum " in line %}
+                            <span style="color: var(--cyber-cyan); font-weight: 700;">{{ line }}</span>
+                        {% elif "public " in line or "private " in line or "protected " in line %}
+                            <span style="color: #f1f5f9;">{{ line }}</span>
+                        {% else %}
+                            {{ line }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('dumpSearchInput');
+    const rows = document.querySelectorAll('.dump-code-row');
+    if (searchInput && rows.length > 0) {
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase().trim();
+            rows.forEach(row => {
+                const text = row.querySelector('.dump-line-text')?.textContent.toLowerCase() || '';
+                if (!val || text.includes(val)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
