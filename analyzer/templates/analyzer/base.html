@@ -42,7 +42,7 @@
 
         <!-- Desktop Tactical Nav -->
         <nav class="desktop-nav">
-            <a href="{% url 'dashboard' %}" class="nav-item-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <a href="{% url 'dashboard' %}?new=1" class="nav-item-link {% if request.resolver_match.url_name == 'dashboard' and not active_project %}active{% endif %}">
                 <i class="bi bi-cloud-arrow-up-fill" style="color: var(--cyber-pink);"></i> APK UPLOAD
             </a>
             <a href="{% url 'offset_center' %}" class="nav-item-link {% if 'offset' in request.resolver_match.url_name %}active{% endif %}">
@@ -90,7 +90,7 @@
             {% endif %}
 
             <!-- Upload Action -->
-            <a href="{% url 'upload' %}" class="btn-action-primary">
+            <a href="{% url 'dashboard' %}?new=1" class="btn-action-primary" title="Upload New APK">
                 <i class="bi bi-cloud-arrow-up-fill"></i>
                 <span>UPLOAD</span>
             </a>

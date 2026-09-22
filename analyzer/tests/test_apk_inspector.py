@@ -52,3 +52,28 @@ class ApkInspectorTests(TestCase):
         info = ApkInspector.parse_android_manifest(raw_manifest)
         self.assertIn("package_name", info)
 
+    def test_smali_parser(self):
+        from analyzer.services.smali_parser import SmaliParser
+        smali_sample = """
+        .class public Lcom/test/game/BattleManager;
+        .super Ljava/lang/Object;
+        .source "BattleManager.java"
+
+        .field public static currentDamage:I
+        .field public coins:I
+
+        .method public calculateDamage(II)I
+            .locals 1
+            return p1
+        .end method
+        """
+        cls_def = SmaliParser.parse_smali_text(smali_sample)
+        self.assertIsNotNone(cls_def)
+        self.assertEqual(cls_def.name, "BattleManager")
+        self.assertEqual(cls_def.namespace, "com.test.game")
+        self.assertEqual(len(cls_def.fields), 2)
+        self.assertEqual(len(cls_def.methods), 1)
+        self.assertEqual(cls_def.fields[0].name, "currentDamage")
+        self.assertEqual(cls_def.fields[1].name, "coins")
+
+

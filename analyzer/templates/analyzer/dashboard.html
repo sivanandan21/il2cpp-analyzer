@@ -175,7 +175,7 @@
         </p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-        <a href="{% url 'upload' %}" class="btn-action-primary">
+        <a href="{% url 'dashboard' %}?new=1" class="btn-action-primary">
             <i class="bi bi-cloud-arrow-up-fill"></i>
             <span>ANALYZE NEW APK // 別APK解析</span>
         </a>
@@ -184,6 +184,17 @@
             <span>DOSSIERS // 出力</span>
         </a>
     </div>
+</div>
+
+<!-- QUICK SWITCH / UPLOAD PROMPT BAR -->
+<div class="glass-card mb-4 p-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-left: 4px solid var(--cyber-pink); background: rgba(255, 0, 85, 0.04);">
+    <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-plus-circle-fill text-warning fs-5"></i>
+        <span class="font-mono text-white small">Want to analyze another game? You can switch targets or decompile a new APK anytime.</span>
+    </div>
+    <a href="{% url 'dashboard' %}?new=1" class="btn btn-sm btn-outline-warning font-mono" style="border-radius: 0; font-size: 0.8rem;">
+        [ + UPLOAD NEW APK DROPZONE ]
+    </a>
 </div>
 
 <div class="hazard-stripe mb-4"></div>

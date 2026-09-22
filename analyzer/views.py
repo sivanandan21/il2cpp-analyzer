@@ -30,6 +30,10 @@ from .services.semantic_analyzer import GAMEPLAY_CATEGORIES
 
 def get_active_project(request):
     """Helper to retrieve explicitly selected project. Does not auto-fallback to sample data."""
+    if request.GET.get('new') == '1' or request.GET.get('upload') == '1':
+        request.session.pop('active_project_id', None)
+        return None
+
     project_id = request.GET.get('project_id') or request.session.get('active_project_id')
     if project_id:
         try:

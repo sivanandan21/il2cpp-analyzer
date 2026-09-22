@@ -22,8 +22,11 @@ import zipfile
 from django.utils import timezone
 
 from .apk_inspector import ApkInspector, ApkInspectionReport
+from .apktool_service import ApktoolService
+from .smali_parser import SmaliParser
+from .game_asset_parser import GameAssetParser
 from .detector import FormatDetector, DetectionResult
-from .metadata_parser import MetadataParser, ParsedMetadataResult
+from .metadata_parser import MetadataParser, ParsedMetadataResult, ParsedAssembly
 from .binary_parser import BinaryParser, BinaryAnalysisResult
 from .address_mapper import AddressMapper, AddressType
 from .scorer import SmartScorer
@@ -63,51 +66,61 @@ class ProjectManager:
             is_archive = zipfile.is_zipfile(file_path)
             target_metadata_path = None
             target_binary_path = None
+            extract_dir = work_dir / "unpacked"
+            extract_dir.mkdir(parents=True, exist_ok=True)
 
-            if is_archive:
-                extract_dir = work_dir / "unpacked"
-                extract_dir.mkdir(parents=True, exist_ok=True)
+            if is_archive or file_path.name.lower().endswith(".apk"):
+                project.is_apk = True
+                project.source_type = "APK"
 
-                # Use ApkInspector for automated APK decompilation and asset extraction
-                apk_report = ApkInspector.inspect_and_extract(file_path, extract_dir)
-                if apk_report.is_valid_apk or file_path.name.lower().endswith(".apk"):
-                    project.is_apk = True
-                    project.source_type = "APK"
-                    if apk_report.package_name:
-                        project.package_name = apk_report.package_name
+                # 1. Real Apktool Decompilation
+                update_step(1, "Executing real Apktool decompilation (smali, manifest, resources, assets)...", "DETECTING")
+                apktool_out = work_dir / "apktool_out"
+                apktool_res = ApktoolService.decompile(file_path, apktool_out)
+
+                if apktool_res.success:
+                    extract_dir = apktool_out
+                    if apktool_res.package_name:
+                        project.package_name = apktool_res.package_name
                         if not project.name or project.name.startswith("Uploaded_") or project.name in ("Game_Analysis", "MyGame"):
-                            project.name = apk_report.app_label or apk_report.package_name
-                    if apk_report.version_name:
-                        project.app_version = apk_report.version_name
-                    if apk_report.engine_type != "UNKNOWN":
-                        project.engine_type = apk_report.engine_type
-                    if apk_report.platform:
-                        project.platform = apk_report.platform
-                    if apk_report.architecture != "UNKNOWN":
-                        project.architecture = apk_report.architecture
-                    if apk_report.unity_version != "UNKNOWN":
-                        project.unity_version = apk_report.unity_version
+                            project.name = apktool_res.package_name
+                    if apktool_res.app_version:
+                        project.app_version = apktool_res.app_version
 
-                    target_metadata_path = apk_report.metadata_path
-                    target_binary_path = apk_report.binary_path
+                # 2. Fast APK Inspection for native libraries and IL2CPP targets
+                apk_report = ApkInspector.inspect_and_extract(file_path, work_dir / "unpacked")
+                if apk_report.package_name and not project.package_name:
+                    project.package_name = apk_report.package_name
+                    if not project.name or project.name.startswith("Uploaded_") or project.name in ("Game_Analysis", "MyGame"):
+                        project.name = apk_report.app_label or apk_report.package_name
+                if apk_report.version_name and not project.app_version:
+                    project.app_version = apk_report.version_name
+                if apk_report.platform:
+                    project.platform = apk_report.platform
+                if apk_report.architecture != "UNKNOWN":
+                    project.architecture = apk_report.architecture
+                if apk_report.unity_version != "UNKNOWN":
+                    project.unity_version = apk_report.unity_version
 
-                    for w in apk_report.warnings:
-                        WarningRecord.objects.create(project=project, category="APK_INSPECTION", message=w, severity="INFO")
+                target_metadata_path = apk_report.metadata_path
+                target_binary_path = apk_report.binary_path
 
-                # Fallback directory search if ApkInspector didn't locate both targets
-                if not target_metadata_path or not target_binary_path:
-                    for root, _, files in os.walk(extract_dir):
-                        for fname in files:
-                            f_full = Path(root) / fname
-                            f_lower = fname.lower()
-                            if not target_metadata_path:
-                                if f_lower == "global-metadata.dat" or f_lower.endswith(".dat"):
-                                    target_metadata_path = f_full
-                                elif f_lower == "dump.cs" or f_lower.endswith(".cs"):
-                                    target_metadata_path = f_full
-                            if not target_binary_path:
-                                if f_lower == "libil2cpp.so" or f_lower == "gameassembly.dll":
-                                    target_binary_path = f_full
+                # Fallback directory search across both extracted locations
+                search_dirs = [extract_dir, work_dir / "unpacked"]
+                for s_dir in search_dirs:
+                    if s_dir.exists():
+                        for root, _, files in os.walk(s_dir):
+                            for fname in files:
+                                f_full = Path(root) / fname
+                                f_lower = fname.lower()
+                                if not target_metadata_path:
+                                    if f_lower == "global-metadata.dat" or f_lower.endswith(".dat"):
+                                        target_metadata_path = f_full
+                                    elif f_lower == "dump.cs" or f_lower.endswith(".cs"):
+                                        target_metadata_path = f_full
+                                if not target_binary_path:
+                                    if f_lower == "libil2cpp.so" or f_lower == "gameassembly.dll":
+                                        target_binary_path = f_full
             else:
                 # Single file uploaded
                 if file_path.name.lower().endswith((".dat", ".cs", ".json", ".csv")):
@@ -130,15 +143,25 @@ class ProjectManager:
                 project.metadata_version = str(det_res.metadata_version)
             if det_res.unity_version != "UNKNOWN" and (not project.unity_version or project.unity_version == "UNKNOWN"):
                 project.unity_version = det_res.unity_version
+
+            # Check for Hybrid / Web / Cordova game engine signatures
+            is_cordova_hybrid = (extract_dir / "assets" / "www").exists() or (work_dir / "unpacked" / "assets" / "www").exists()
+            if is_cordova_hybrid:
+                project.engine_type = "HTML5 / Cordova Hybrid Engine"
+            elif target_metadata_path:
+                project.engine_type = "Unity (IL2CPP)"
+            elif not project.engine_type or project.engine_type == "UNKNOWN":
+                project.engine_type = "Android Native (Dalvik / Smali)"
+
             project.save()
 
             for w in det_res.warnings:
                 WarningRecord.objects.create(project=project, category="DETECTION", message=w, severity="INFO")
 
-            update_step(3, f"Detected platform: {project.platform}, arch: {project.architecture}.", "PARSING")
+            update_step(3, f"Detected engine: {project.engine_type}, platform: {project.platform}, arch: {project.architecture}.", "PARSING")
 
-            # Step 4: Parsing metadata
-            update_step(4, "Parsing IL2CPP metadata tables and type definitions.", "PARSING")
+            # Step 4: Parsing metadata & decompiled Smali/Asset code
+            update_step(4, "Parsing decompiled game classes, Smali bytecode, and assets.", "PARSING")
             parsed_meta: Optional[ParsedMetadataResult] = None
             if target_metadata_path and target_metadata_path.exists():
                 parsed_meta = MetadataParser.parse_file(target_metadata_path)
@@ -146,6 +169,22 @@ class ProjectManager:
                     project.metadata_version = str(parsed_meta.metadata_version)
                 for w in parsed_meta.warnings:
                     WarningRecord.objects.create(project=project, category="METADATA", message=w, severity="WARNING")
+
+            # Decompiled Smali & Game Asset Parser
+            game_meta = GameAssetParser.parse_game_assets(extract_dir, apk_path=file_path)
+            smali_classes = SmaliParser.parse_smali_directory(extract_dir, package_filter=project.package_name, max_classes=300)
+
+            if not parsed_meta:
+                parsed_meta = ParsedMetadataResult(is_valid=True, source_type="APKTOOL_SMALI_ASSETS")
+
+            if game_meta and game_meta.classes:
+                parsed_meta.classes.extend(game_meta.classes)
+                if game_meta.assemblies:
+                    parsed_meta.assemblies.extend(game_meta.assemblies)
+
+            if smali_classes:
+                parsed_meta.classes.extend(smali_classes)
+                parsed_meta.assemblies.append(ParsedAssembly(name="Android.Dalvik.Smali", class_count=len(smali_classes), token=0x03))
 
             # Step 5: Parsing binary
             update_step(5, "Analyzing native binary headers and method pointers.", "PARSING")
@@ -158,7 +197,7 @@ class ProjectManager:
                     WarningRecord.objects.create(project=project, category="BINARY", message=w, severity="INFO")
 
             # Step 6: Building indexes (Database Ingestion)
-            update_step(6, "Reconstructing classes, methods, fields, and hierarchy.", "INDEXING")
+            update_step(6, f"Reconstructing {len(parsed_meta.classes)} classes, methods, and verified fields.", "INDEXING")
             scorer = SmartScorer()
 
             if parsed_meta and parsed_meta.classes:
