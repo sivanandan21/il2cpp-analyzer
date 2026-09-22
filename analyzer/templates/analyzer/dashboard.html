@@ -188,6 +188,38 @@
 
 <div class="hazard-stripe mb-4"></div>
 
+{% if active_project.classes_count == 0 %}
+<div class="glass-card mb-4" style="border: 2px solid var(--cyber-cyan); box-shadow: 6px 6px 0px #000;">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="anime-tag" style="background: var(--cyber-cyan); color: #000;">[ ENGINE TELEMETRY ]</span>
+        <span class="badge-address badge-method-rva">{{ active_project.engine_type }}</span>
+    </div>
+    <h2 class="h4 text-white font-anime fw-bold mb-2">
+        NON-IL2CPP / NATIVE ANDROID PACKAGE INSPECTED
+    </h2>
+    <p class="text-secondary font-mono small mb-3">
+        This APK utilizes a <strong class="text-info">{{ active_project.engine_type }}</strong> runtime rather than Unity IL2CPP bytecode. Manifest specifications, target SDK, activities, and permissions were successfully inspected and cataloged.
+    </p>
+    <div class="row g-2 font-mono small">
+        <div class="col-12 col-md-4">
+            <div class="p-2 border border-dark" style="background: rgba(0,0,0,0.4);">
+                <span class="text-secondary">PACKAGE:</span> <span class="text-warning fw-bold">{{ active_project.package_name|default:"Native Android Package" }}</span>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="p-2 border border-dark" style="background: rgba(0,0,0,0.4);">
+                <span class="text-secondary">VERSION:</span> <span class="text-info fw-bold">{{ active_project.app_version|default:"1.0" }}</span>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="p-2 border border-dark" style="background: rgba(0,0,0,0.4);">
+                <span class="text-secondary">ARCH / PLATFORM:</span> <span class="text-white fw-bold">{{ active_project.platform }} / {{ active_project.architecture }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- ========================================================================= -->
 <!-- 🔥 GAMEPLAY DATA QUICK DOSSIER ("EASY FOR USER")                           -->
 <!-- ========================================================================= -->
@@ -762,7 +794,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     progressPercent.innerText = 'ERROR';
                     hudTitle.innerText = 'DECOMPILATION FAILED';
                     hudTitle.style.color = '#ff0055';
-                    appendConsoleLine('[ FAILURE ' + xhr.status + ' ] ' + (xhr.responseText || 'Analysis pipeline encountered an error.'));
+                    var errMsg = 'Analysis pipeline encountered an error.';
+                    try {
+                        var errJson = JSON.parse(xhr.responseText);
+                        if (errJson.message) errMsg = errJson.message;
+                    } catch(e) {
+                        if (xhr.responseText) errMsg = xhr.responseText.substring(0, 300);
+                    }
+                    appendConsoleLine('[ FAILURE ' + xhr.status + ' ] ' + errMsg);
                     if (closeBtn) closeBtn.style.display = 'inline-block';
                 }
             };

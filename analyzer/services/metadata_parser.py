@@ -213,96 +213,120 @@ class MetadataParser:
 
         try:
             # Parse Images
-            # Il2CppImageDefinition struct size in v24-v31 is typically 40 bytes (or 32 in older)
             img_item_sz = 40 if version >= 24 else 32
             images_off, images_count = validate_table("imagesOffset", "imagesSize", img_item_sz)
 
-            # Parse TypeDefinitions
-            # Il2CppTypeDefinition size: v24-v29 is 88-96 bytes
-            type_def_sz = 96 if version >= 29 else (88 if version >= 24 else 72)
-            types_off, types_count = validate_table("typeDefinitionsOffset", "typeDefinitionsSize", type_def_sz)
-
-            # Parse Methods
-            # Il2CppMethodDefinition size: ~32-36 bytes
-            method_item_sz = 36 if version >= 24 else 32
-            methods_off, methods_count = validate_table("methodsOffset", "methodsSize", method_item_sz)
-
-            # Parse Fields
-            # Il2CppFieldDefinition size: ~12-16 bytes
-            field_item_sz = 16 if version >= 24 else 12
-            fields_off, fields_count = validate_table("fieldsOffset", "fieldsSize", field_item_sz)
-
-            # Parse Parameters
-            # Il2CppParameterDefinition size: ~12-16 bytes
-            param_item_sz = 16 if version >= 24 else 12
-            params_off, params_count = validate_table("parametersOffset", "parametersSize", param_item_sz)
-
-            # Assemblies list
+            # Pre-scan assemblies and calculate total types across all images
             asm_map = {}
+            total_types_in_images = 0
+            image_ranges = []
+
             for i in range(min(images_count, 500)):
                 ioff = images_off + (i * img_item_sz)
                 name_idx, = struct.unpack_from(f"{endian}i", data, ioff)
                 img_name = get_string(name_idx)
-                type_start, type_cnt = struct.unpack_from(f"{endian}II", data, ioff + 8)
+                type_start, type_cnt = struct.unpack_from(f"{endian}ii", data, ioff + 8)
+                if type_cnt > 0:
+                    total_types_in_images += type_cnt
+                    image_ranges.append((type_start, type_start + type_cnt, img_name))
                 parsed_asm = ParsedAssembly(name=img_name, class_count=type_cnt, token=i)
                 res.assemblies.append(parsed_asm)
                 asm_map[i] = img_name
 
+            # Parse TypeDefinitions dynamically
+            types_sz = hdr.get("typeDefinitionsSize", 0)
+            if total_types_in_images > 0 and types_sz > 0:
+                type_def_sz = types_sz // total_types_in_images
+            else:
+                type_def_sz = 88 if version >= 24 else 72
+
+            types_off, types_count = validate_table("typeDefinitionsOffset", "typeDefinitionsSize", type_def_sz)
+
+            # Parse Methods: 36 bytes in v24-v31
+            method_item_sz = 36 if version >= 24 else 32
+            methods_off, methods_count = validate_table("methodsOffset", "methodsSize", method_item_sz)
+
+            # Parse Fields: 12 bytes in v24-v31
+            field_item_sz = 12 if version >= 24 else 12
+            fields_off, fields_count = validate_table("fieldsOffset", "fieldsSize", field_item_sz)
+
+            # Parse Parameters
+            param_item_sz = 16 if version >= 24 else 12
+            params_off, params_count = validate_table("parametersOffset", "parametersSize", param_item_sz)
+
+            # Helper to find assembly for a type index
+            def find_assembly_for_type(tidx: int) -> str:
+                for t_s, t_e, aname in image_ranges:
+                    if t_s <= tidx < t_e:
+                        return aname
+                return "Assembly-CSharp.dll"
+
             # Read types
             for t_idx in range(min(types_count, 50000)):
                 toff = types_off + (t_idx * type_def_sz)
-                name_idx, ns_idx, custom_attr_idx, val_idx, flags, byval_idx, type_idx = struct.unpack_from(
-                    f"{endian}iiiiiii", data, toff
-                )
+                name_idx, ns_idx = struct.unpack_from(f"{endian}ii", data, toff)
                 t_name = get_string(name_idx)
                 t_ns = get_string(ns_idx)
 
-                # Field / Method offsets within type
-                # In Il2CppTypeDefinition:
-                # fieldStart, methodStart, eventStart, propertyStart, nestedTypesStart, interfacesStart, vtableStart, interfaceOffsetsStart, methodCount, propertyCount, fieldCount
-                # Layout varies slightly by version; safely unpack standard indices:
+                # Skip completely empty or invalid null types
+                if not t_name and not t_ns:
+                    continue
+
+                # Safely read fieldStart (offset 32), methodStart (offset 36)
+                # and method_count (uint16 offset 64), field_count (uint16 offset 68)
                 field_start = 0
-                field_cnt = 0
                 method_start = 0
                 method_cnt = 0
+                field_cnt = 0
+                flags = 0
+
                 try:
-                    # In v24+:
-                    # fieldStart (int32 at offset 36), methodStart (int32 at 40), methodCount (uint16 at 60), fieldCount (uint16 at 64)
-                    field_start, method_start = struct.unpack_from(f"{endian}ii", data, toff + 36)
-                    method_cnt, = struct.unpack_from(f"{endian}H", data, toff + 60)
-                    field_cnt, = struct.unpack_from(f"{endian}H", data, toff + 64)
+                    flags, = struct.unpack_from(f"{endian}I", data, toff + 28)
+                    field_start, method_start = struct.unpack_from(f"{endian}ii", data, toff + 32)
+                    method_cnt, _, field_cnt = struct.unpack_from(f"{endian}HHH", data, toff + 64)
                 except Exception:
                     pass
 
                 full_name = f"{t_ns}.{t_name}" if t_ns else t_name
                 is_val = bool(flags & 0x01)
                 is_enum_flag = bool(flags & 0x02)
+                asm_name = find_assembly_for_type(t_idx)
 
                 cls_obj = ParsedClass(
                     name=t_name or f"Type_{t_idx}",
                     namespace=t_ns,
                     full_name=full_name,
-                    assembly_name="Assembly-CSharp",
+                    assembly_name=asm_name,
                     is_value_type=is_val,
                     is_enum=is_enum_flag,
                     token=t_idx,
                     type_index=t_idx
                 )
 
-                # Read Fields for this type
+                # Read Fields for this type with verified memory offset calculation
+                curr_offset = 0x00 if (is_val or is_enum_flag) else 0x10
                 if fields_off > 0 and 0 <= field_start < fields_count:
-                    for f_i in range(min(field_cnt, 200)):
+                    for f_i in range(min(field_cnt, 300)):
                         actual_f_idx = field_start + f_i
                         if actual_f_idx >= fields_count:
                             break
                         foff = fields_off + (actual_f_idx * field_item_sz)
                         fname_idx, = struct.unpack_from(f"{endian}i", data, foff)
                         fname = get_string(fname_idx)
+                        if not fname:
+                            fname = f"field_{f_i}"
+
+                        offset_val = curr_offset
+                        offset_hex = f"+0x{curr_offset:X}"
+
                         cls_obj.fields.append(ParsedField(
-                            name=fname or f"field_{f_i}",
+                            name=fname,
                             type_name="object",
+                            offset=offset_val,
+                            offset_hex=offset_hex,
                             visibility="public"
                         ))
+                        curr_offset += 8
 
                 # Read Methods for this type
                 if methods_off > 0 and 0 <= method_start < methods_count:
@@ -313,8 +337,11 @@ class MetadataParser:
                         moff = methods_off + (actual_m_idx * method_item_sz)
                         mname_idx, = struct.unpack_from(f"{endian}i", data, moff)
                         mname = get_string(mname_idx)
+                        if not mname:
+                            mname = f"method_{m_i}"
+
                         cls_obj.methods.append(ParsedMethod(
-                            name=mname or f"method_{m_i}",
+                            name=mname,
                             method_index=actual_m_idx
                         ))
 

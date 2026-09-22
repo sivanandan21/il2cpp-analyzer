@@ -115,8 +115,7 @@ class BinaryParser:
 
     @classmethod
     def _scan_elf_codegen_modules(cls, data: bytes, elf_res: ELFParseResult, res: BinaryAnalysisResult):
-        """Locate Il2CppCodeGenModule structures in ELF."""
-        # Search for string "Assembly-CSharp.dll"
+        """Locate Il2CppCodeGenModule structures in ELF via direct pointers and dynamic relocations."""
         target_str = b"Assembly-CSharp.dll\x00"
         str_offset = data.find(target_str)
         if str_offset == -1:
@@ -129,26 +128,83 @@ class BinaryParser:
 
         ptr_size = res.pointer_size
         pack_fmt = "<Q" if ptr_size == 8 else "<I"
-        ptr_bytes = struct.pack(pack_fmt, str_vaddr)
 
-        # Look for pointers pointing to the string
+        # Check for relocation sections (.rela.dyn or .rel.dyn)
+        rela_sec = next((s for s in elf_res.sections if s.name in ('.rela.dyn', '.rel.dyn')), None)
+
+        if rela_sec:
+            is_rela = (rela_sec.name == '.rela.dyn')
+            entry_sz = 24 if (elf_res.is_64bit and is_rela) else (12 if is_rela else 8)
+            count = rela_sec.sh_size // entry_sz
+
+            codegen_module_vaddr = None
+
+            # Find Il2CppCodeGenModule.moduleName relocation
+            for i in range(count):
+                off = rela_sec.sh_offset + i * entry_sz
+                if elf_res.is_64bit and is_rela:
+                    r_off, _, r_addend = struct.unpack_from('<QQq', data, off)
+                    if r_addend == str_vaddr:
+                        codegen_module_vaddr = r_off
+                        break
+                elif not elf_res.is_64bit and not is_rela:
+                    r_off, _ = struct.unpack_from('<II', data, off)
+                    foff = ELFParser.vaddr_to_file_offset(r_off, elf_res.segments)
+                    if foff and foff + 4 <= len(data):
+                        val, = struct.unpack_from('<I', data, foff)
+                        if val == str_vaddr:
+                            codegen_module_vaddr = r_off
+                            break
+
+            if codegen_module_vaddr:
+                mod_file_off = ELFParser.vaddr_to_file_offset(codegen_module_vaddr, elf_res.segments)
+                if mod_file_off and mod_file_off + 24 <= len(data):
+                    m_count, = struct.unpack_from('<I', data, mod_file_off + ptr_size)
+                    ptrs_table_field_vaddr = codegen_module_vaddr + (16 if ptr_size == 8 else 8)
+
+                    # Look up ptrs_table_field_vaddr in relocations
+                    table_vaddr = None
+                    for i in range(count):
+                        off = rela_sec.sh_offset + i * entry_sz
+                        if elf_res.is_64bit and is_rela:
+                            r_off, _, r_addend = struct.unpack_from('<QQq', data, off)
+                            if r_off == ptrs_table_field_vaddr:
+                                table_vaddr = r_addend
+                                break
+
+                    if table_vaddr and 0 < m_count < 250000:
+                        table_end = table_vaddr + (m_count * ptr_size)
+                        for i in range(count):
+                            off = rela_sec.sh_offset + i * entry_sz
+                            if elf_res.is_64bit and is_rela:
+                                r_off, _, r_addend = struct.unpack_from('<QQq', data, off)
+                                if table_vaddr <= r_off < table_end:
+                                    m_idx = (r_off - table_vaddr) // ptr_size
+                                    if r_addend != 0:
+                                        fn_file_off = ELFParser.vaddr_to_file_offset(r_addend, elf_res.segments)
+                                        res.method_pointers[m_idx] = NativeMethodAddress(
+                                            method_index=m_idx,
+                                            rva=r_addend - res.image_base,
+                                            va=r_addend,
+                                            file_offset=fn_file_off,
+                                            source="libil2cpp.so (.rela.dyn)",
+                                            confidence="HIGH"
+                                        )
+                        if len(res.method_pointers) > 0:
+                            return
+
+        # Fallback: scan raw binary data for pointer to string
+        ptr_bytes = struct.pack(pack_fmt, str_vaddr)
         pos = 0
         while pos < len(data) - ptr_size:
             idx = data.find(ptr_bytes, pos)
             if idx == -1:
                 break
 
-            # In Il2CppCodeGenModule:
-            # struct Il2CppCodeGenModule {
-            #    const char* moduleName; // at offset 0
-            #    uint32_t methodPointerCount; // at offset ptr_size
-            #    const Il2CppMethodPointer* methodPointers; // at offset ptr_size + 4 or aligned
-            # }
             try:
                 m_count_off = idx + ptr_size
                 m_count, = struct.unpack_from("<I", data, m_count_off)
 
-                # Pointer to methodPointers table
                 m_ptrs_field_off = m_count_off + (8 if ptr_size == 8 else 4)
                 if ptr_size == 8 and (m_count_off % 8 != 0):
                     m_ptrs_field_off = ((m_count_off + 7) // 8) * 8
@@ -158,7 +214,6 @@ class BinaryParser:
                     m_ptrs_file_off = ELFParser.vaddr_to_file_offset(m_ptrs_vaddr, elf_res.segments)
 
                     if m_ptrs_file_off and 0 < m_count < 200000:
-                        # Valid method pointers array found!
                         for m_idx in range(min(m_count, 50000)):
                             entry_off = m_ptrs_file_off + (m_idx * ptr_size)
                             if entry_off + ptr_size > len(data):
@@ -172,7 +227,7 @@ class BinaryParser:
                                     rva=fn_rva,
                                     va=fn_vaddr,
                                     file_offset=fn_file_off,
-                                    source="libil2cpp.so (Il2CppCodeGenModule)",
+                                    source="libil2cpp.so (raw Il2CppCodeGenModule)",
                                     confidence="HIGH"
                                 )
                         break

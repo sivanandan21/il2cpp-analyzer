@@ -70,10 +70,14 @@ def dashboard(request):
                     dest.write(chunk)
 
             # Initiate analysis immediately
-            ProjectManager.process_project(project.id, saved_file_path)
+            res = ProjectManager.process_project(project.id, saved_file_path)
             request.session['active_project_id'] = project.id
 
             is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+            if res.get("status") == "FAILED":
+                if is_ajax:
+                    return JsonResponse({"status": "ERROR", "message": res.get("error", "Analysis failed.")}, status=400)
+
             if is_ajax:
                 return JsonResponse({
                     "status": "SUCCESS",
@@ -125,31 +129,36 @@ def dashboard(request):
                 "count": c['count']
             })
 
-        # Query top game data for user convenience
+        # Query top game data with category and keyword matching
         gameplay_dossier["currencies"] = list(FieldDefinition.objects.filter(
-            class_def__project=active_proj,
-            primary_category__in=['CURRENCY', 'ECONOMY', 'REWARDS']
-        ).select_related('class_def').order_by('-importance_score')[:8])
+            Q(class_def__project=active_proj) &
+            (Q(primary_category__in=['CURRENCY', 'ECONOMY', 'REWARDS']) |
+             Q(name__iregex=r'(coin|gem|gold|money|cash|currency|token|diamond|credit|balance|wallet|reward|price|cost|star)'))
+        ).select_related('class_def').order_by('-importance_score')[:12])
 
         gameplay_dossier["stats"] = list(FieldDefinition.objects.filter(
-            class_def__project=active_proj,
-            primary_category__in=['HEALTH', 'PLAYER', 'ENERGY', 'STAMINA', 'EXPERIENCE']
-        ).select_related('class_def').order_by('-importance_score')[:8])
+            Q(class_def__project=active_proj) &
+            (Q(primary_category__in=['HEALTH', 'PLAYER', 'ENERGY', 'STAMINA', 'EXPERIENCE']) |
+             Q(name__iregex=r'(hp|health|life|mana|energy|stamina|exp|level|score|player|avatar|rank)'))
+        ).select_related('class_def').order_by('-importance_score')[:12])
 
         gameplay_dossier["combat"] = list(FieldDefinition.objects.filter(
-            class_def__project=active_proj,
-            primary_category__in=['DAMAGE', 'COMBAT', 'WEAPON', 'AMMO', 'COOLDOWN']
-        ).select_related('class_def').order_by('-importance_score')[:8])
+            Q(class_def__project=active_proj) &
+            (Q(primary_category__in=['DAMAGE', 'COMBAT', 'WEAPON', 'AMMO', 'COOLDOWN']) |
+             Q(name__iregex=r'(damage|atk|attack|crit|defense|weapon|gun|bullet|ammo|cooldown|shield|armor)'))
+        ).select_related('class_def').order_by('-importance_score')[:12])
 
         gameplay_dossier["speed"] = list(FieldDefinition.objects.filter(
-            class_def__project=active_proj,
-            primary_category__in=['SPEED', 'PHYSICS']
-        ).select_related('class_def').order_by('-importance_score')[:6])
+            Q(class_def__project=active_proj) &
+            (Q(primary_category__in=['SPEED', 'PHYSICS']) |
+             Q(name__iregex=r'(speed|velocity|move|jump|accel|gravity|dash|friction)'))
+        ).select_related('class_def').order_by('-importance_score')[:10])
 
         gameplay_dossier["security"] = list(MethodDefinition.objects.filter(
-            class_def__project=active_proj,
-            primary_category__in=['SECURITY', 'NETWORK', 'ENCRYPTION']
-        ).select_related('class_def').order_by('-importance_score')[:6])
+            Q(class_def__project=active_proj) &
+            (Q(primary_category__in=['SECURITY', 'NETWORK', 'ENCRYPTION']) |
+             Q(name__iregex=r'(anti|cheat|ban|security|verify|protect|token|tamper|auth|signature|integrity)'))
+        ).select_related('class_def').order_by('-importance_score')[:10])
 
     upload_form = ProjectUploadForm()
 
@@ -214,10 +223,14 @@ def upload_view(request):
                     dest.write(chunk)
 
             # Initiate analysis synchronously
-            ProjectManager.process_project(project.id, saved_file_path)
+            res = ProjectManager.process_project(project.id, saved_file_path)
             request.session['active_project_id'] = project.id
 
             is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+            if res.get("status") == "FAILED":
+                if is_ajax:
+                    return JsonResponse({"status": "ERROR", "message": res.get("error", "Analysis failed.")}, status=400)
+
             if is_ajax:
                 return JsonResponse({
                     "status": "SUCCESS",

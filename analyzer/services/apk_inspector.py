@@ -178,7 +178,7 @@ class ApkInspector:
 
     @classmethod
     def parse_android_manifest(cls, data: bytes) -> Dict[str, Any]:
-        """Parse Android Binary XML (AXML) string pool and extract package / activity info."""
+        """Parse Android Binary XML (AXML) string pool and element/attribute chunk trees."""
         info: Dict[str, Any] = {
             "package_name": "",
             "version_name": "",
@@ -210,6 +210,7 @@ class ApkInspector:
             for off in offsets:
                 pos = base + off
                 if pos >= len(data):
+                    extracted_strings.append("")
                     continue
                 if is_utf8:
                     length = data[pos]
@@ -217,6 +218,7 @@ class ApkInspector:
                     if length & 0x80:
                         pos += 1
                     if pos >= len(data):
+                        extracted_strings.append("")
                         continue
                     byte_len = data[pos]
                     pos += 1
@@ -225,44 +227,100 @@ class ApkInspector:
                     s = data[pos : pos + byte_len].decode('utf-8', 'ignore')
                 else:
                     if pos + 2 > len(data):
+                        extracted_strings.append("")
                         continue
                     char_len = struct.unpack('<H', data[pos : pos + 2])[0]
                     pos += 2
                     s = data[pos : pos + char_len * 2].decode('utf-16le', 'ignore')
                 extracted_strings.append(s)
 
-            # Discover package name: reverse domain pattern (e.g. com.company.game)
-            package_candidates = []
-            for s in extracted_strings:
-                s_strip = s.strip()
-                if re.match(r'^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*){2,}$', s_strip):
-                    if not s_strip.startswith(('android.', 'androidx.', 'com.google.', 'com.unity3d.')):
-                        package_candidates.append(s_strip)
-                if s_strip.startswith('android.permission.'):
-                    info["permissions"].append(s_strip.replace('android.permission.', ''))
+            # Walk XML chunk tree to extract exact tag attributes
+            pos = 8 + chunk_size
+            curr_activity = ""
+            has_main = False
+            has_launcher = False
 
-            if package_candidates:
-                info["package_name"] = package_candidates[0]
-            elif any(s.count('.') >= 1 for s in extracted_strings):
+            while pos < len(data) - 8:
+                ctype, csz = struct.unpack('<II', data[pos : pos + 8])
+                if csz <= 0:
+                    break
+
+                if ctype == 0x00100102:  # START_TAG
+                    tag_name_idx = struct.unpack('<I', data[pos + 20 : pos + 24])[0]
+                    tname = extracted_strings[tag_name_idx] if tag_name_idx < len(extracted_strings) else ""
+                    attr_start, attr_sz, attr_cnt = struct.unpack('<HHH', data[pos + 24 : pos + 30])
+                    aptr = pos + 16 + attr_start
+
+                    attrs = {}
+                    for _ in range(attr_cnt):
+                        if aptr + 20 > len(data):
+                            break
+                        aname_idx, araw_idx = struct.unpack('<II', data[aptr + 4 : aptr + 12])
+                        aname = extracted_strings[aname_idx] if aname_idx < len(extracted_strings) else ""
+                        sval = extracted_strings[araw_idx] if (araw_idx != 0xFFFFFFFF and araw_idx < len(extracted_strings)) else ""
+                        ival, = struct.unpack('<I', data[aptr + 16 : aptr + 20])
+                        attrs[aname] = (sval, ival)
+                        aptr += attr_sz
+
+                    if tname == 'manifest':
+                        if 'package' in attrs and attrs['package'][0]:
+                            info['package_name'] = attrs['package'][0]
+                        if 'versionName' in attrs and attrs['versionName'][0]:
+                            info['version_name'] = attrs['versionName'][0]
+                        if 'versionCode' in attrs:
+                            info['version_code'] = str(attrs['versionCode'][1])
+                    elif tname == 'application':
+                        if 'label' in attrs and attrs['label'][0] and not attrs['label'][0].startswith('@'):
+                            info['app_label'] = attrs['label'][0]
+                    elif tname == 'uses-permission':
+                        if 'name' in attrs:
+                            pname = attrs['name'][0].replace('android.permission.', '')
+                            if pname and pname not in info['permissions']:
+                                info['permissions'].append(pname)
+                    elif tname == 'activity':
+                        if 'name' in attrs:
+                            curr_activity = attrs['name'][0]
+                        has_main = False
+                        has_launcher = False
+                    elif tname == 'action':
+                        if 'name' in attrs and 'MAIN' in attrs['name'][0]:
+                            has_main = True
+                    elif tname == 'category':
+                        if 'name' in attrs and 'LAUNCHER' in attrs['name'][0]:
+                            has_launcher = True
+                        if has_main and has_launcher and curr_activity and not info['main_activity']:
+                            info['main_activity'] = curr_activity
+
+                pos += csz
+
+            # Heuristic fallbacks if chunk parsing didn't find package or version
+            if not info["package_name"]:
+                package_candidates = []
                 for s in extracted_strings:
-                    if '.' in s and not s.startswith(('android', 'androidx', 'http')):
-                        info["package_name"] = s
+                    s_strip = s.strip()
+                    if re.match(r'^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*){2,}$', s_strip):
+                        if not s_strip.startswith(('android.', 'androidx.', 'com.google.', 'com.unity3d.', 'com.applovin.')):
+                            package_candidates.append(s_strip)
+                if package_candidates:
+                    info["package_name"] = package_candidates[0]
+
+            if not info["version_name"]:
+                for s in extracted_strings:
+                    s_strip = s.strip()
+                    if re.match(r'^\d+\.\d+(\.\d+)*$', s_strip):
+                        info["version_name"] = s_strip
                         break
 
-            # Discover Version Name & Code
-            for idx, s in enumerate(extracted_strings):
-                if s == "versionName" and idx + 1 < len(extracted_strings):
-                    info["version_name"] = extracted_strings[idx + 1]
-                elif s == "versionCode" and idx + 1 < len(extracted_strings):
-                    info["version_code"] = extracted_strings[idx + 1]
-                elif s.endswith("Activity") and not info["main_activity"]:
-                    info["main_activity"] = s
-
             # Infer user-friendly app label from package name if not explicitly set
-            if info["package_name"]:
+            if not info["app_label"] and info["package_name"]:
                 parts = info["package_name"].split('.')
-                clean_name = parts[-1].replace('_', ' ').replace('-', ' ').title()
-                info["app_label"] = clean_name
+                # Use last part or meaningful segment (e.g. com.ludo.king -> Ludo King)
+                tail = [p for p in parts if p not in ('com', 'org', 'net', 'cct', 'game', 'app')]
+                if tail:
+                    clean_name = " ".join([t.replace('_', ' ').replace('-', ' ').title() for t in tail])
+                    info["app_label"] = clean_name
+                else:
+                    info["app_label"] = parts[-1].title()
 
         except Exception:
             pass

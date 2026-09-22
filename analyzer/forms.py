@@ -31,7 +31,7 @@ class ProjectUploadForm(forms.ModelForm):
         model = Project
         fields = ['name', 'description']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. MyGame_v1.0_Arm64'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Auto-detected from APK if blank...'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Optional analysis notes...'}),
         }
 

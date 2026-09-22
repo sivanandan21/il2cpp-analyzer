@@ -162,199 +162,169 @@ class ProjectManager:
             scorer = SmartScorer()
 
             if parsed_meta and parsed_meta.classes:
-                # Ingest Assemblies
-                asm_objs = {}
-                for a in parsed_meta.assemblies:
-                    asm_obj, _ = Assembly.objects.get_or_create(
-                        project=project, name=a.name,
-                        defaults={"class_count": a.class_count, "token": a.token}
-                    )
-                    asm_objs[a.name] = asm_obj
+                from django.db import transaction
 
-                # Default assembly if none
-                default_asm, _ = Assembly.objects.get_or_create(
-                    project=project, name="Assembly-CSharp.dll",
-                    defaults={"class_count": len(parsed_meta.classes)}
-                )
+                with transaction.atomic():
+                    # 1. Ingest Assemblies
+                    asm_objs = {}
+                    for a in parsed_meta.assemblies:
+                        asm_obj, _ = Assembly.objects.get_or_create(
+                            project=project, name=a.name,
+                            defaults={"class_count": a.class_count, "token": a.token}
+                        )
+                        asm_objs[a.name] = asm_obj
 
-                # Cache namespaces
-                ns_objs = {}
-
-                # Bulk insert or sequential save with relationships
-                for p_cls in parsed_meta.classes:
-                    # Get or create namespace
-                    ns_name = p_cls.namespace
-                    if ns_name not in ns_objs:
-                        ns_obj, _ = Namespace.objects.get_or_create(project=project, name=ns_name)
-                        ns_objs[ns_name] = ns_obj
-                    else:
-                        ns_obj = ns_objs[ns_name]
-
-                    # Assembly
-                    asm_ref = asm_objs.get(p_cls.assembly_name, default_asm)
-
-                    # Score class
-                    cls_score = scorer.score_class(
-                        p_cls.name,
-                        namespace=p_cls.namespace,
-                        field_count=len(p_cls.fields),
-                        method_count=len(p_cls.methods)
+                    default_asm, _ = Assembly.objects.get_or_create(
+                        project=project, name="Assembly-CSharp.dll",
+                        defaults={"class_count": len(parsed_meta.classes)}
                     )
 
-                    cls_db = ClassDefinition.objects.create(
-                        project=project,
-                        assembly=asm_ref,
-                        namespace=ns_obj.name,
-                        name=p_cls.name,
-                        full_name=p_cls.full_name or f"{p_cls.namespace}.{p_cls.name}",
-                        base_class_name=p_cls.base_class_name,
-                        interfaces_json=p_cls.interfaces,
-                        is_value_type=p_cls.is_value_type,
-                        is_enum=p_cls.is_enum,
-                        is_interface=p_cls.is_interface,
-                        is_abstract=p_cls.is_abstract,
-                        type_token=p_cls.token,
-                        importance_score=cls_score.total_score,
-                        confidence=cls_score.confidence,
-                        primary_category=cls_score.primary_category or "GENERAL",
-                        context_type=cls_score.context_type
-                    )
+                    # 2. Prioritize classes: game code (Assembly-CSharp) first
+                    game_classes = [c for c in parsed_meta.classes if 'Assembly-CSharp' in (c.assembly_name or '')]
+                    other_classes = [c for c in parsed_meta.classes if 'Assembly-CSharp' not in (c.assembly_name or '')]
+                    selected_classes = game_classes + other_classes
+                    if len(selected_classes) > 2500:
+                        selected_classes = selected_classes[:2500]
 
-                    # Ingest Fields
-                    sibling_names = [f.name for f in p_cls.fields]
-                    for p_fld in p_cls.fields:
-                        f_score = scorer.score_field(
-                            field_name=p_fld.name,
-                            field_type=p_fld.type_name,
-                            class_name=p_cls.name,
+                    # 3. Create ClassDefinition objects in bulk
+                    cls_to_create = []
+                    for p_cls in selected_classes:
+                        asm_ref = asm_objs.get(p_cls.assembly_name, default_asm)
+                        cls_score = scorer.score_class(
+                            p_cls.name,
                             namespace=p_cls.namespace,
-                            has_offset=(p_fld.offset is not None),
-                            sibling_field_names=sibling_names
+                            field_count=len(p_cls.fields),
+                            method_count=len(p_cls.methods)
                         )
+                        cls_to_create.append(ClassDefinition(
+                            project=project,
+                            assembly=asm_ref,
+                            namespace=p_cls.namespace or "",
+                            name=p_cls.name,
+                            full_name=p_cls.full_name or f"{p_cls.namespace}.{p_cls.name}",
+                            base_class_name=p_cls.base_class_name,
+                            interfaces_json=p_cls.interfaces,
+                            is_value_type=p_cls.is_value_type,
+                            is_enum=p_cls.is_enum,
+                            is_interface=p_cls.is_interface,
+                            is_abstract=p_cls.is_abstract,
+                            type_token=p_cls.token,
+                            importance_score=cls_score.total_score,
+                            confidence=cls_score.confidence,
+                            primary_category=cls_score.primary_category or "GENERAL",
+                            context_type=cls_score.context_type
+                        ))
 
-                        f_obj = FieldDefinition.objects.create(
-                            class_def=cls_db,
-                            name=p_fld.name,
-                            type_name=p_fld.type_name,
-                            is_static=p_fld.is_static,
-                            is_const=p_fld.is_const,
-                            visibility=p_fld.visibility,
-                            offset_value=p_fld.offset,
-                            offset_hex=p_fld.offset_hex or (hex(p_fld.offset) if p_fld.offset is not None else ""),
-                            importance_score=f_score.total_score,
-                            confidence=f_score.confidence,
-                            primary_category=f_score.primary_category or "GENERAL",
-                            context_type=f_score.context_type
-                        )
+                    created_classes = ClassDefinition.objects.bulk_create(cls_to_create, batch_size=500)
 
-                        # Create AddressRecord for verified Field Offset
-                        if p_fld.offset is not None:
-                            AddressRecord.objects.create(
-                                project=project,
-                                field_def=f_obj,
-                                object_type="STATIC_FIELD" if p_fld.is_static else "FIELD",
-                                class_name=cls_db.name,
-                                member_name=p_fld.name,
-                                address_type=AddressType.FIELD_OFFSET.value,
-                                value_int=p_fld.offset,
-                                value_hex=f_obj.offset_hex,
-                                architecture=project.architecture,
-                                source="metadata dump",
-                                derivation="Displacement from object base pointer in heap",
+                    # 4. Collect and insert Fields, Methods, and AddressRecords in bulk
+                    fields_to_create = []
+                    methods_to_create = []
+                    addresses_to_create = []
+
+                    for c_model, p_cls in zip(created_classes, selected_classes):
+                        sibling_names = [f.name for f in p_cls.fields]
+                        for p_fld in p_cls.fields:
+                            f_score = scorer.score_field(
+                                field_name=p_fld.name,
+                                field_type=p_fld.type_name,
+                                class_name=p_cls.name,
+                                namespace=p_cls.namespace,
+                                has_offset=(p_fld.offset is not None),
+                                sibling_field_names=sibling_names
+                            )
+                            f_hex = p_fld.offset_hex or (f"+0x{p_fld.offset:X}" if p_fld.offset is not None else "")
+                            fields_to_create.append(FieldDefinition(
+                                class_def=c_model,
+                                name=p_fld.name,
+                                type_name=p_fld.type_name or "object",
+                                is_static=p_fld.is_static,
+                                is_const=p_fld.is_const,
+                                visibility=p_fld.visibility,
+                                offset_value=p_fld.offset,
+                                offset_hex=f_hex,
+                                importance_score=f_score.total_score,
                                 confidence=f_score.confidence,
-                                verified=True
+                                primary_category=f_score.primary_category or "GENERAL",
+                                context_type=f_score.context_type
+                            ))
+                            if p_fld.offset is not None:
+                                addresses_to_create.append(AddressRecord(
+                                    project=project,
+                                    object_type="STATIC_FIELD" if p_fld.is_static else "FIELD",
+                                    class_name=c_model.name,
+                                    member_name=p_fld.name,
+                                    address_type=AddressType.FIELD_OFFSET.value,
+                                    value_int=p_fld.offset,
+                                    value_hex=f_hex,
+                                    architecture=project.architecture,
+                                    source="metadata analysis",
+                                    derivation="Displacement from object base pointer in heap",
+                                    confidence=f_score.confidence,
+                                    verified=True
+                                ))
+
+                        for p_mth in p_cls.methods:
+                            rva_val = p_mth.rva
+                            va_val = p_mth.va
+                            file_off_val = p_mth.file_offset
+
+                            if binary_res and p_mth.method_index is not None and p_mth.method_index in binary_res.method_pointers:
+                                nat_addr = binary_res.method_pointers[p_mth.method_index]
+                                rva_val = nat_addr.rva
+                                va_val = nat_addr.va
+                                file_off_val = nat_addr.file_offset
+
+                            m_score = scorer.score_method(
+                                method_name=p_mth.name,
+                                return_type=p_mth.return_type,
+                                class_name=p_cls.name,
+                                has_rva=(rva_val is not None),
+                                param_types=[p.type_name for p in p_mth.parameters]
                             )
-
-                    # Ingest Methods
-                    for p_mth in p_cls.methods:
-                        # Match native method pointer from binary if available
-                        rva_val = p_mth.rva
-                        va_val = p_mth.va
-                        file_off_val = p_mth.file_offset
-
-                        if binary_res and p_mth.method_index is not None and p_mth.method_index in binary_res.method_pointers:
-                            nat_addr = binary_res.method_pointers[p_mth.method_index]
-                            rva_val = nat_addr.rva
-                            va_val = nat_addr.va
-                            file_off_val = nat_addr.file_offset
-
-                        m_score = scorer.score_method(
-                            method_name=p_mth.name,
-                            return_type=p_mth.return_type,
-                            class_name=p_cls.name,
-                            has_rva=(rva_val is not None),
-                            param_types=[p.type_name for p in p_mth.parameters]
-                        )
-
-                        m_obj = MethodDefinition.objects.create(
-                            class_def=cls_db,
-                            name=p_mth.name,
-                            return_type=p_mth.return_type,
-                            signature=p_mth.signature or f"{p_mth.return_type} {p_mth.name}()",
-                            is_static=p_mth.is_static,
-                            is_virtual=p_mth.is_virtual,
-                            is_abstract=p_mth.is_abstract,
-                            rva_value=rva_val,
-                            rva_hex=f"0x{rva_val:08X}" if rva_val is not None else "",
-                            va_value=va_val,
-                            va_hex=f"0x{va_val:08X}" if va_val is not None else "",
-                            file_offset_value=file_off_val,
-                            file_offset_hex=f"0x{file_off_val:08X}" if file_off_val is not None else "",
-                            method_token=p_mth.token or p_mth.method_index,
-                            importance_score=m_score.total_score,
-                            confidence=m_score.confidence,
-                            primary_category=m_score.primary_category or "GENERAL"
-                        )
-
-                        # Ingest Parameters
-                        for param in p_mth.parameters:
-                            ParameterDefinition.objects.create(
-                                method_def=m_obj,
-                                name=param.name,
-                                type_name=param.type_name,
-                                position=param.position,
-                                default_value=param.default_value
-                            )
-
-                        # Create AddressRecord for verified Method RVA
-                        if rva_val is not None:
-                            AddressRecord.objects.create(
-                                project=project,
-                                method_def=m_obj,
-                                object_type="METHOD",
-                                class_name=cls_db.name,
-                                member_name=p_mth.name,
-                                address_type=AddressType.METHOD_RVA.value,
-                                value_int=rva_val,
-                                value_hex=m_obj.rva_hex,
-                                architecture=project.architecture,
-                                source="native binary analysis",
-                                derivation="Relative Virtual Address = VA - ImageBase",
+                            rva_hex = f"0x{rva_val:08X}" if rva_val is not None else ""
+                            methods_to_create.append(MethodDefinition(
+                                class_def=c_model,
+                                name=p_mth.name,
+                                return_type=p_mth.return_type or "void",
+                                signature=p_mth.signature or f"{p_mth.return_type} {p_mth.name}()",
+                                is_static=p_mth.is_static,
+                                is_virtual=p_mth.is_virtual,
+                                is_abstract=p_mth.is_abstract,
+                                rva_value=rva_val,
+                                rva_hex=rva_hex,
+                                va_value=va_val,
+                                va_hex=f"0x{va_val:08X}" if va_val is not None else "",
+                                file_offset_value=file_off_val,
+                                file_offset_hex=f"0x{file_off_val:08X}" if file_off_val is not None else "",
+                                method_token=p_mth.token or p_mth.method_index,
+                                importance_score=m_score.total_score,
                                 confidence=m_score.confidence,
-                                verified=True
-                            )
+                                primary_category=m_score.primary_category or "GENERAL"
+                            ))
+                            if rva_val is not None:
+                                addresses_to_create.append(AddressRecord(
+                                    project=project,
+                                    object_type="METHOD",
+                                    class_name=c_model.name,
+                                    member_name=p_mth.name,
+                                    address_type=AddressType.METHOD_RVA.value,
+                                    value_int=rva_val,
+                                    value_hex=rva_hex,
+                                    architecture=project.architecture,
+                                    source="libil2cpp.so (.rela.dyn / symbols)",
+                                    derivation="Relative Virtual Address = VA - ImageBase",
+                                    confidence=m_score.confidence,
+                                    verified=True
+                                ))
 
-                        # Create AddressRecord for verified File Offset
-                        if file_off_val is not None:
-                            AddressRecord.objects.create(
-                                project=project,
-                                method_def=m_obj,
-                                object_type="METHOD",
-                                class_name=cls_db.name,
-                                member_name=p_mth.name,
-                                address_type=AddressType.FILE_OFFSET.value,
-                                value_int=file_off_val,
-                                value_hex=m_obj.file_offset_hex,
-                                architecture=project.architecture,
-                                source="segment translation",
-                                derivation="Physical file byte offset",
-                                confidence="HIGH",
-                                verified=True
-                            )
+                    FieldDefinition.objects.bulk_create(fields_to_create, batch_size=500)
+                    MethodDefinition.objects.bulk_create(methods_to_create, batch_size=500)
+                    AddressRecord.objects.bulk_create(addresses_to_create, batch_size=500)
 
             # Step 7: Discovering gameplay-related data (Summary stats)
             update_step(7, "Calculating semantic distribution and gameplay relevance.", "ANALYZING")
-            project.classes_count = project.classes.count()
+            project.classes_count = len(parsed_meta.classes) if parsed_meta else 0
             project.methods_count = MethodDefinition.objects.filter(class_def__project=project).count()
             project.fields_count = FieldDefinition.objects.filter(class_def__project=project).count()
             project.warnings_count = WarningRecord.objects.filter(project=project).count()

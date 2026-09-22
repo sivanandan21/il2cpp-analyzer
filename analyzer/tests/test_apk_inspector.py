@@ -41,3 +41,14 @@ class ApkInspectorTests(TestCase):
         self.assertTrue(report.metadata_path.exists())
         self.assertIsNotNone(report.binary_path)
         self.assertTrue(report.binary_path.exists())
+
+    def test_parse_android_manifest_axml(self):
+        # Construct minimal AXML with string pool
+        strings = ["manifest", "package", "versionName", "com.test.game", "1.2.3"]
+        str_bytes = b"".join(s.encode('utf-16le') + b"\x00\x00" for s in strings)
+        str_pool_header = struct.pack('<IIIIIII', 0x001D0001, len(str_bytes) + 28, len(strings), 0, 0, 28, 0)
+        axml_header = struct.pack('<II', 0x00080003, len(str_bytes) + 36)
+        raw_manifest = axml_header + str_pool_header + str_bytes
+        info = ApkInspector.parse_android_manifest(raw_manifest)
+        self.assertIn("package_name", info)
+
