@@ -32,6 +32,7 @@ urlpatterns = [
     path('categories/', views.category_dashboard, name='category_dashboard'),
     path('categories/<str:category_name>/', views.category_detail, name='category_detail'),
     path('search/', views.global_search_view, name='global_search'),
+    path('search-view/', views.global_search_view, name='search_view'),
 
     # Graph, Dump Viewer, Comparison, Rules & Reports
     path('graph/', views.graph_view, name='graph_view'),

@@ -304,7 +304,7 @@
             </div>
             {% else %}
             <div class="p-4 text-center text-secondary font-mono">
-                No explicit currency fields found in top scoring rules. Use the <a href="{% url 'search_view' %}" class="text-info">Search Engine</a> to query all fields.
+                No explicit currency fields found in top scoring rules. Use the <a href="{% url 'global_search' %}" class="text-info">Search Engine</a> to query all fields.
             </div>
             {% endif %}
         </div>
@@ -725,50 +725,75 @@ document.addEventListener('DOMContentLoaded', function() {
             // Display tactical decompilation HUD
             overlay.style.display = 'flex';
             hudFilename.innerText = 'TARGET PAYLOAD: ' + file.name + ' (' + (file.size / (1024*1024)).toFixed(1) + ' MB)';
-            progressBar.style.width = '5%';
-            progressPercent.innerText = '5%';
-            transferStats.innerText = '0.0 MB / ' + (file.size / (1024*1024)).toFixed(1) + ' MB';
+            
+            var currentPercent = 2;
+            progressBar.style.width = '2%';
+            progressPercent.innerText = '2%';
+            progressBar.style.background = 'linear-gradient(90deg, var(--cyber-pink), var(--cyber-cyan))';
+            transferStats.innerText = '0.0 MB / ' + (file.size / (1024*1024)).toFixed(1) + ' MB [INITIALIZING]';
             appendConsoleLine('[ INITIATED ] Target Payload: ' + file.name + ' (' + (file.size / (1024*1024)).toFixed(1) + ' MB)');
+
+            function setMonotonicProgress(pct, statusText) {
+                if (pct > currentPercent) {
+                    currentPercent = Math.min(pct, 100);
+                    progressBar.style.width = currentPercent + '%';
+                    progressPercent.innerText = currentPercent + '%';
+                }
+                if (statusText) {
+                    transferStats.innerText = statusText;
+                }
+            }
 
             var formData = new FormData(form);
             var xhr = new XMLHttpRequest();
             xhr.open('POST', form.action || window.location.href, true);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
+            var serverPhaseTimer = null;
+            var serverPhaseActive = false;
+
+            function triggerServerDecompilePhase() {
+                if (serverPhaseActive) return;
+                serverPhaseActive = true;
+                
+                setMonotonicProgress(52, 'PAYLOAD TRANSMITTED • DECOMPILING & ANALYZING...');
+                appendConsoleLine('[ UPLOAD SUCCESS ] Binary payload received. Initiating automated decompiler...');
+                advanceConsoleLog();
+
+                // Incrementally advance simulated server analysis (52% -> 94%)
+                serverPhaseTimer = setInterval(function() {
+                    if (currentPercent < 94) {
+                        var nextPct = currentPercent + Math.floor(Math.random() * 4) + 3;
+                        if (nextPct > 94) nextPct = 94;
+                        setMonotonicProgress(nextPct, 'ANALYZING IL2CPP METADATA & OFFSETS (' + nextPct + '%)...');
+                        advanceConsoleLog();
+                    }
+                }, 1400);
+            }
+
             // Real-time upload percentage (0% to 50%)
             xhr.upload.onprogress = function(e) {
-                if (e.lengthComputable) {
-                    var percent = Math.min(50, Math.round((e.loaded / e.total) * 50));
-                    progressBar.style.width = percent + '%';
-                    progressPercent.innerText = percent + '%';
-                    transferStats.innerText = (e.loaded / (1024*1024)).toFixed(1) + ' MB / ' + (e.total / (1024*1024)).toFixed(1) + ' MB';
-                    
-                    if (e.loaded === e.total) {
-                        progressBar.style.width = '55%';
-                        progressPercent.innerText = '55%';
-                        transferStats.innerText = 'UPLOAD COMPLETE • DECOMPILING...';
-                        appendConsoleLine('[ UPLOAD SUCCESS ] Binary payload received. Initiating automated decompiler...');
-                        advanceConsoleLog();
+                if (e.lengthComputable && e.total > 0) {
+                    var uploadRatio = e.loaded / e.total;
+                    var uploadPercent = Math.min(50, Math.floor(uploadRatio * 50));
+                    var loadedMb = (e.loaded / (1024*1024)).toFixed(1);
+                    var totalMb = (e.total / (1024*1024)).toFixed(1);
+                    setMonotonicProgress(uploadPercent, loadedMb + ' MB / ' + totalMb + ' MB [UPLOADING: ' + Math.round(uploadRatio * 100) + '%]');
+
+                    if (e.loaded >= e.total) {
+                        triggerServerDecompilePhase();
                     }
                 }
             };
 
-            // Simulated step advances during server processing (55% -> 95%)
-            var serverPhaseTimer = setInterval(function() {
-                var current = parseInt(progressBar.style.width) || 55;
-                if (current < 92) {
-                    current += 6;
-                    progressBar.style.width = current + '%';
-                    progressPercent.innerText = current + '%';
-                    advanceConsoleLog();
-                }
-            }, 1200);
+            xhr.upload.onload = function() {
+                triggerServerDecompilePhase();
+            };
 
             xhr.onload = function() {
-                clearInterval(serverPhaseTimer);
+                if (serverPhaseTimer) clearInterval(serverPhaseTimer);
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    progressBar.style.width = '100%';
-                    progressPercent.innerText = '100%';
+                    setMonotonicProgress(100, 'DECOMPILATION COMPLETE • 100%');
                     hudBadge.innerText = '[ 完了 COMPLETE: 100% ]';
                     hudBadge.style.background = 'var(--cyber-green)';
                     hudTitle.innerText = 'DECOMPILATION COMPLETE!';
@@ -807,7 +832,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             xhr.onerror = function() {
-                clearInterval(serverPhaseTimer);
+                if (serverPhaseTimer) clearInterval(serverPhaseTimer);
                 progressBar.style.background = '#ff0055';
                 progressBar.style.width = '100%';
                 progressPercent.innerText = 'ERROR';

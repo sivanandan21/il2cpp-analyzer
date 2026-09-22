@@ -58,3 +58,13 @@ class SearchAndApiTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn("results", data)
+
+    def test_search_view_url_reversals(self):
+        self.assertEqual(reverse('global_search'), '/search/')
+        self.assertEqual(reverse('search_view'), '/search-view/')
+
+    def test_dashboard_with_active_project_renders_ok(self):
+        resp = self.client.get(f"/?project_id={self.project.id}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "BattleManager")
+
