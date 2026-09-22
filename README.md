@@ -1,7 +1,7 @@
 <div align="center">
 
 # ⚡ IL2CPP GAME DATA & OFFSET ANALYZER
-### // 統合リバースエンジニアリング台帳 • NEO-BRUTALISM × ANIME CYBERPUNK HUD
+
 
 <br/>
 
