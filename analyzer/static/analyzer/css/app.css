@@ -1083,3 +1083,45 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--cyber-pink);
 }
 
+/* In-Page Interactive Dossier Modal Viewer */
+.dossier-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.dossier-modal-window {
+  width: 100%;
+  max-width: 1160px;
+  background: #0d111a !important;
+  border: 2px solid var(--cyber-cyan) !important;
+  box-shadow: 6px 6px 0px var(--cyber-pink) !important;
+  border-radius: 0 !important;
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+}
+.dossier-pre-viewer {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #e2e8f0;
+  background: #07090e;
+  padding: 16px;
+  margin: 0;
+  border: 1px solid #1a2234;
+  overflow: auto;
+  max-height: 72vh;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+

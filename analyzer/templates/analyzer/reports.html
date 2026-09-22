@@ -59,30 +59,30 @@
     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-lightning-charge-fill text-warning"></i>
-            <strong class="text-white font-mono small text-uppercase">1-Click Fast Exports // 高速一括ダウンロード</strong>
+            <strong class="text-white font-mono small text-uppercase">1-Click Fast Exports &amp; In-Browser Inspector // 高速一括出力</strong>
         </div>
-        <span class="badge bg-dark border border-secondary font-mono text-secondary" style="font-size: 0.7rem;">Verified Filenames &bull; Direct Notepad &amp; Cheat Engine Ready</span>
+        <span class="badge bg-dark border border-secondary font-mono text-secondary" style="font-size: 0.7rem;">Direct View &bull; 1-Click Copy &bull; Direct Notepad Ready</span>
     </div>
     <div class="d-flex gap-2 flex-wrap pt-1">
-        <a href="{% url 'download_report' project.id 'all_reports.zip' %}" download="all_reports.zip" class="btn-action-primary py-2 px-3" style="font-size: 0.8rem; background: var(--cyber-yellow); color: #000;">
-            <i class="bi bi-file-earmark-zip-fill"></i>
-            <span>DOWNLOAD ALL (.ZIP)</span>
-        </a>
-        <a href="{% url 'download_report' project.id 'all_txt_reports.zip' %}" download="all_txt_reports.zip" class="btn-action-primary py-2 px-3" style="font-size: 0.8rem; background: var(--cyber-cyan); color: #000;">
+        <button type="button" class="btn-action-primary py-2 px-3" style="font-size: 0.8rem; background: var(--cyber-yellow); color: #000;" onclick="openDossierModal('gameplay_offsets.txt')">
+            <i class="bi bi-eye-fill"></i>
+            <span>VIEW &amp; COPY CHEATSHEET (.TXT)</span>
+        </button>
+        <button type="button" class="btn-action-primary py-2 px-3" style="font-size: 0.8rem; background: var(--cyber-cyan); color: #000;" onclick="openDossierModal('analysis_report.txt')">
             <i class="bi bi-file-text-fill"></i>
+            <span>VIEW &amp; COPY MASTER REPORT (.TXT)</span>
+        </button>
+        <button type="button" class="btn-export-quick accent-pink" onclick="openDossierModal('dump.cs')">
+            <i class="bi bi-file-earmark-code text-danger"></i>
+            <span>VIEW &amp; COPY dump.cs</span>
+        </button>
+        <a href="{% url 'download_report' project.id 'all_txt_reports.zip' %}" download="all_txt_reports.zip" class="btn-export-quick accent-yellow">
+            <i class="bi bi-file-earmark-zip-fill text-warning"></i>
             <span>ALL TEXT FILES (.ZIP)</span>
         </a>
-        <a href="{% url 'download_report' project.id 'gameplay_offsets.txt' %}" download="gameplay_offsets.txt" class="btn-export-quick accent-yellow">
-            <i class="bi bi-file-earmark-text text-warning"></i>
-            <span>gameplay_offsets.txt</span>
-        </a>
-        <a href="{% url 'download_report' project.id 'analysis_report.txt' %}" download="analysis_report.txt" class="btn-export-quick">
-            <i class="bi bi-file-earmark-text text-info"></i>
-            <span>analysis_report.txt</span>
-        </a>
-        <a href="{% url 'download_report' project.id 'dump.cs' %}" download="dump.cs" class="btn-export-quick accent-pink">
-            <i class="bi bi-file-earmark-code text-danger"></i>
-            <span>dump.cs (C# Dump)</span>
+        <a href="{% url 'download_report' project.id 'all_reports.zip' %}" download="all_reports.zip" class="btn-export-quick">
+            <i class="bi bi-archive-fill text-info"></i>
+            <span>ALL ARTIFACTS (.ZIP)</span>
         </a>
     </div>
 </div>
@@ -121,7 +121,7 @@
                 <i class="bi bi-file-earmark-arrow-down text-warning"></i>
                 <span>EXPORTABLE DOSSIERS // 出力可能ファイル (<span id="visibleReportCount">{{ reports|length }}</span>)</span>
             </div>
-            <div class="card-subtitle mb-0 font-mono">Files download with their exact filename and extension for Notepad, GameGuardian, and IDA.</div>
+            <div class="card-subtitle mb-0 font-mono">View in browser, copy to clipboard, or save directly to your computer.</div>
         </div>
     </div>
 
@@ -132,9 +132,9 @@
                 <thead>
                     <tr>
                         <th style="min-width: 320px;">Report Filename &amp; Contents</th>
-                        <th style="width: 180px;">Format &amp; Tool Target</th>
-                        <th style="width: 100px;">Size</th>
-                        <th class="text-end" style="width: 170px;">Action</th>
+                        <th style="width: 170px;">Format &amp; Target</th>
+                        <th style="width: 90px;">Size</th>
+                        <th class="text-end" style="width: 220px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -158,7 +158,7 @@
                                     <i class="bi bi-file-earmark text-secondary fs-5 mt-1"></i>
                                 {% endif %}
                                 <div>
-                                    <a href="{% url 'download_report' project.id r.name %}" download="{{ r.name }}" class="font-mono text-white fw-bold text-decoration-none">
+                                    <a href="javascript:void(0)" onclick="openDossierModal('{{ r.name }}')" class="font-mono text-white fw-bold text-decoration-none">
                                         {{ r.name }}
                                     </a>
                                     <div class="font-mono text-secondary small pt-1" style="font-size: 0.72rem; line-height: 1.3;">
@@ -177,10 +177,19 @@
                             <span class="text-white">{{ r.size_kb }}</span> KB
                         </td>
                         <td class="text-end">
-                            <a href="{% url 'download_report' project.id r.name %}" download="{{ r.name }}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
-                                <i class="bi bi-download"></i>
-                                <span>DOWNLOAD // 出力</span>
-                            </a>
+                            <div class="d-flex justify-content-end align-items-center gap-1">
+                                {% if r.ext != '.zip' %}
+                                <button type="button" class="btn btn-sm btn-dark border border-cyan text-cyan py-1 px-2" style="font-size: 0.75rem;" onclick="openDossierModal('{{ r.name }}')" title="View and copy in browser">
+                                    <i class="bi bi-eye"></i> VIEW
+                                </button>
+                                <a href="{% url 'download_report' project.id r.name %}?view=1" target="_blank" class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2" style="font-size: 0.75rem;" title="Open raw in new browser tab">
+                                    <i class="bi bi-box-arrow-up-right"></i> RAW
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'download_report' project.id r.name %}" download="{{ r.name }}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;" onclick="saveArtifactFile('{{ project.id }}', '{{ r.name }}', event)" title="Save file to disk">
+                                    <i class="bi bi-download"></i> SAVE
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
@@ -212,10 +221,16 @@
                 </div>
                 <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary-subtle">
                     <span class="font-mono text-secondary small">{{ r.size_kb }} KB</span>
-                    <a href="{% url 'download_report' project.id r.name %}" download="{{ r.name }}" class="btn-action-primary py-1 px-3" style="font-size: 0.78rem;">
-                        <i class="bi bi-download"></i>
-                        <span>DOWNLOAD</span>
-                    </a>
+                    <div class="d-flex gap-1">
+                        {% if r.ext != '.zip' %}
+                        <button type="button" class="btn btn-sm btn-dark border border-cyan text-cyan py-1 px-2" style="font-size: 0.75rem;" onclick="openDossierModal('{{ r.name }}')">
+                            <i class="bi bi-eye"></i> VIEW
+                        </button>
+                        {% endif %}
+                        <a href="{% url 'download_report' project.id r.name %}" download="{{ r.name }}" class="btn-action-primary py-1 px-2" style="font-size: 0.75rem;" onclick="saveArtifactFile('{{ project.id }}', '{{ r.name }}', event)">
+                            <i class="bi bi-download"></i> SAVE
+                        </a>
+                    </div>
                 </div>
             </div>
             {% empty %}
@@ -227,8 +242,136 @@
     </div>
 </div>
 
-<!-- Format Filtering JavaScript -->
+<!-- Interactive Dossier Modal Viewer -->
+<div id="dossierModal" class="dossier-modal-overlay" style="display: none;">
+    <div class="dossier-modal-window">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-dark flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-file-earmark-code text-cyan fs-5"></i>
+                <strong id="modalFileName" class="text-white font-mono">analysis_report.txt</strong>
+                <span id="modalFileSize" class="badge bg-dark border border-secondary font-mono text-cyan">0 KB</span>
+            </div>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <button type="button" class="btn btn-sm btn-action-primary py-1 px-3" onclick="copyModalContent()">
+                    <i class="bi bi-clipboard-check"></i> <span id="copyBtnText">COPY ALL TO CLIPBOARD // 全コピー</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-dark border border-warning text-warning py-1 px-2" onclick="saveCurrentModalFile()">
+                    <i class="bi bi-download"></i> SAVE FILE
+                </button>
+                <a id="modalNewTabLink" href="#" target="_blank" class="btn btn-sm btn-dark border border-secondary text-white py-1 px-2">
+                    <i class="bi bi-box-arrow-up-right"></i> RAW
+                </a>
+                <button type="button" class="btn btn-sm btn-dark border border-danger text-danger py-1 px-2" onclick="closeDossierModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+        <div class="p-3">
+            <pre class="dossier-pre-viewer"><code id="modalPreContent">Loading...</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- Format Filtering & Modal Interaction JavaScript -->
 <script>
+let currentModalFilename = '';
+let currentModalRawContent = '';
+const activeProjectId = '{{ project.id }}';
+
+async function openDossierModal(filename) {
+    currentModalFilename = filename;
+    const modal = document.getElementById('dossierModal');
+    const nameElem = document.getElementById('modalFileName');
+    const preElem = document.getElementById('modalPreContent');
+    const sizeElem = document.getElementById('modalFileSize');
+    const rawLink = document.getElementById('modalNewTabLink');
+
+    nameElem.textContent = filename;
+    sizeElem.textContent = 'LOADING...';
+    preElem.textContent = 'Loading dossier content directly from database...';
+    rawLink.href = `/reports/${activeProjectId}/${filename}?view=1`;
+    modal.style.display = 'flex';
+
+    try {
+        const resp = await fetch(`/reports/${activeProjectId}/${filename}?json=1`);
+        const data = await resp.json();
+        if (data.is_binary) {
+            preElem.textContent = `[ Compressed Archive (${data.size_kb} KB) ]\n\nPlease click SAVE FILE or use the ZIP download button.`;
+            currentModalRawContent = '';
+        } else {
+            preElem.textContent = data.content;
+            currentModalRawContent = data.content;
+        }
+        sizeElem.textContent = `${data.size_kb} KB`;
+    } catch(err) {
+        preElem.textContent = `Error loading dossier: ${err.message}`;
+    }
+}
+
+function closeDossierModal() {
+    document.getElementById('dossierModal').style.display = 'none';
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDossierModal();
+});
+
+// Close modal on clicking backdrop
+document.getElementById('dossierModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDossierModal();
+});
+
+function copyModalContent() {
+    if (!currentModalRawContent) return;
+    navigator.clipboard.writeText(currentModalRawContent).then(() => {
+        const btnText = document.getElementById('copyBtnText');
+        const orig = btnText.textContent;
+        btnText.textContent = 'COPIED TO CLIPBOARD! // コピー完了';
+        btnText.parentElement.style.background = 'var(--cyber-green)';
+        btnText.parentElement.style.color = '#000';
+        setTimeout(() => {
+            btnText.textContent = orig;
+            btnText.parentElement.style.background = '';
+            btnText.parentElement.style.color = '';
+        }, 2200);
+    });
+}
+
+function saveCurrentModalFile() {
+    if (!currentModalFilename) return;
+    saveArtifactFile(activeProjectId, currentModalFilename);
+}
+
+async function saveArtifactFile(projectId, filename, event) {
+    if (filename.endsWith('.zip')) {
+        // Normal server download for zip files
+        return;
+    }
+    if (event) event.preventDefault();
+
+    try {
+        const resp = await fetch(`/reports/${projectId}/${filename}?view=1`);
+        const text = await resp.text();
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 1500);
+        if (typeof showToast === 'function') {
+            showToast(`Saved ${filename} directly!`);
+        }
+    } catch(err) {
+        window.location.href = `/reports/${projectId}/${filename}`;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const filterTabs = document.querySelectorAll('#formatFilterBar button');
     const tableRows = document.querySelectorAll('#reportsTable tbody tr.report-row');

@@ -884,8 +884,30 @@ def download_report(request, project_id, filename):
         except Exception:
             pass
 
-    if not file_path.exists():
-        raise Http404("Report not found")
+    # If ?json=1 requested for in-page modal viewer
+    if request.GET.get('json') == '1':
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            return JsonResponse({
+                "filename": filename,
+                "content": content,
+                "size_kb": max(0.1, round(file_path.stat().st_size / 1024, 1)),
+                "is_binary": False
+            })
+        except Exception as e:
+            return JsonResponse({"filename": filename, "error": str(e), "is_binary": True})
+
+    # If ?view=1 or ?raw=1 requested to view directly in browser tab
+    if request.GET.get('view') == '1' or request.GET.get('raw') == '1':
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            resp = HttpResponse(content, content_type="text/plain; charset=utf-8")
+            resp['Content-Disposition'] = f'inline; filename="{filename}"'
+            resp['X-Content-Type-Options'] = 'nosniff'
+        except Exception:
+            pass
 
     ext = file_path.suffix.lower()
     mime_map = {
